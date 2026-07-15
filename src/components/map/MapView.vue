@@ -194,7 +194,7 @@
         <div class="recommend-card">
           <div class="recommend-header">
             <h3>추천 여행지</h3>
-            <span>경로 주변의 인기 포인트</span>
+            <span>{{ routeInfo ? '경로 주변 추천' : '랜덤 추천' }}</span>
           </div>
 
           <div class="recommend-list">
@@ -308,16 +308,20 @@ function formatDuration(seconds) {
 }
 
 function getPlaceById(id) {
-  return places.value.find((place) => place.contentid === id) || null
+  if (!id) return null
+  return places.value.find((place) => place.contentid === id) || allPlaces.value.find((place) => place.contentid === id) || null
 }
 
 function getSuggestions(query) {
   const keyword = (query || '').trim().toLowerCase()
+
+  const source = allPlaces.value.filter((place) => activeCategories.value.includes(place.category))
+
   if (!keyword) {
-    return places.value.slice(0, 8)
+    return source.slice(0, 8)
   }
 
-  return places.value
+  return source
     .filter((place) => {
       const text = [place.title, place.addr1, place.category].filter(Boolean).join(' ').toLowerCase()
       return text.includes(keyword)
@@ -354,6 +358,8 @@ function onAutocompleteInput(key, index, value) {
     waypoints.value[index].query = value
     waypoints.value[index].id = ''
     waypoints.value[index].label = ''
+    openAutocomplete(`waypoint:${index}`)
+    return
   }
 
   openAutocomplete(key)
@@ -516,6 +522,16 @@ async function loadPlaces() {
   applyFilters()
 }
 
+function pickRandom(items, count) {
+  if (!items.length) return []
+  const shuffled = [...items]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.slice(0, count)
+}
+
 async function drawRoute() {
   if (!map || !routeLayer) return
 
@@ -535,11 +551,11 @@ async function drawRoute() {
     return
   }
 
-  const waypointCoords = waypoints.value
+  const waypointPlaces = waypoints.value
     .map((waypoint) => getPlaceById(waypoint.id))
     .filter(Boolean)
-    .map((place) => getLatLng(place))
-    .filter(Boolean)
+
+  const waypointCoords = waypointPlaces.map((place) => getLatLng(place)).filter(Boolean)
 
   const points = [startLatLng, ...waypointCoords, endLatLng]
   const coords = points.map((point) => `${point[1]},${point[0]}`).join(';')
@@ -573,7 +589,7 @@ async function drawRoute() {
       .addTo(routeLayer)
 
     waypointCoords.forEach((latlng, index) => {
-      const place = getPlaceById(waypoints.value[index]?.id)
+      const place = waypointPlaces[index]
       L.marker(latlng, { icon: createMarkerIcon('#f59e0b') })
         .bindPopup(`<strong>경유지</strong><br />${place?.title || '경유지'}`)
         .addTo(routeLayer)
@@ -628,12 +644,35 @@ const recommendedPlaces = computed(() => {
     ...waypoints.value.map((waypoint) => waypoint.id).filter(Boolean),
   ])
 
-  return allPlaces.value
-    .filter((place) => {
-      if (blockedIds.has(place.contentid)) return false
-      return activeCategories.value.includes(place.category)
-    })
-    .slice(0, 3)
+  const active = allPlaces.value.filter((place) => {
+    if (blockedIds.has(place.contentid)) return false
+    return activeCategories.value.includes(place.category)
+  })
+
+  if (!active.length) return []
+
+  if (routeInfo.value) {
+    const routePoints = [
+      getPlaceById(startId.value),
+      ...waypoints.value.map((waypoint) => getPlaceById(waypoint.id)).filter(Boolean),
+      getPlaceById(endId.value),
+    ].filter(Boolean)
+
+    if (routePoints.length) {
+      const centerLat = routePoints.reduce((sum, place) => sum + Number(place.mapy), 0) / routePoints.length
+      const centerLng = routePoints.reduce((sum, place) => sum + Number(place.mapx), 0) / routePoints.length
+
+      const nearby = active.filter((place) => {
+        const latlng = getLatLng(place)
+        if (!latlng) return false
+        return Math.abs(latlng[0] - centerLat) < 0.12 && Math.abs(latlng[1] - centerLng) < 0.12
+      })
+
+      return pickRandom(nearby.length ? nearby : active, 3)
+    }
+  }
+
+  return pickRandom(active, 3)
 })
 
 const routeMiniCards = computed(() => {
