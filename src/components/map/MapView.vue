@@ -1,18 +1,41 @@
 <template>
   <div class="map-page">
     <div class="panel">
-      <div class="map-controls">
-        <div class="control-group">
-          <label for="start">출발지</label>
-          <select id="start" v-model="startId">
-            <option value="">선택하세요</option>
-            <option v-for="place in places" :key="place.contentid" :value="place.contentid">
-              {{ place.title }}
-            </option>
-          </select>
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Seoul Travel Planner</p>
+          <h2>지도 기반 여행 경로</h2>
+        </div>
+      </div>
+
+      <div class="controls-grid">
+        <div class="control-card">
+          <label for="start-input">출발지</label>
+          <div class="autocomplete-wrap">
+            <input
+              id="start-input"
+              v-model="startQuery"
+              type="text"
+              autocomplete="off"
+              placeholder="출발지를 검색하세요"
+              @focus="openAutocomplete('start')"
+              @input="onAutocompleteInput('start', null, $event.target.value)"
+              @blur="scheduleClose"
+            />
+            <ul v-if="isAutocompleteOpen('start') && getSuggestions(startQuery).length" class="autocomplete-list">
+              <li
+                v-for="place in getSuggestions(startQuery)"
+                :key="place.contentid"
+                @mousedown.prevent="selectPlace('start', null, place)"
+              >
+                <strong>{{ place.title }}</strong>
+                <span>{{ place.addr1 || place.category }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <div class="control-group wide">
+        <div class="control-card wide">
           <label>경유지</label>
           <div class="waypoint-list">
             <div
@@ -26,26 +49,60 @@
               @dragend="handleWaypointDragEnd"
             >
               <span class="drag-handle">⋮⋮</span>
-              <select v-model="waypoint.id">
-                <option value="">선택하세요</option>
-                <option v-for="place in places" :key="place.contentid" :value="place.contentid">
-                  {{ place.title }}
-                </option>
-              </select>
+              <div class="autocomplete-wrap">
+                <input
+                  v-model="waypoint.query"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="경유지를 검색하세요"
+                  @focus="openAutocomplete(`waypoint:${index}`)"
+                  @input="onAutocompleteInput('waypoint', index, $event.target.value)"
+                  @blur="scheduleClose"
+                />
+                <ul
+                  v-if="isAutocompleteOpen(`waypoint:${index}`) && getSuggestions(waypoint.query).length"
+                  class="autocomplete-list"
+                >
+                  <li
+                    v-for="place in getSuggestions(waypoint.query)"
+                    :key="place.contentid"
+                    @mousedown.prevent="selectPlace('waypoint', index, place)"
+                  >
+                    <strong>{{ place.title }}</strong>
+                    <span>{{ place.addr1 || place.category }}</span>
+                  </li>
+                </ul>
+              </div>
               <button class="secondary small" @click="removeWaypoint(index)">삭제</button>
             </div>
           </div>
           <button class="secondary small add-waypoint" @click="addWaypoint">경유지 추가</button>
         </div>
 
-        <div class="control-group">
-          <label for="end">도착지</label>
-          <select id="end" v-model="endId">
-            <option value="">선택하세요</option>
-            <option v-for="place in places" :key="place.contentid" :value="place.contentid">
-              {{ place.title }}
-            </option>
-          </select>
+        <div class="control-card">
+          <label for="end-input">도착지</label>
+          <div class="autocomplete-wrap">
+            <input
+              id="end-input"
+              v-model="endQuery"
+              type="text"
+              autocomplete="off"
+              placeholder="도착지를 검색하세요"
+              @focus="openAutocomplete('end')"
+              @input="onAutocompleteInput('end', null, $event.target.value)"
+              @blur="scheduleClose"
+            />
+            <ul v-if="isAutocompleteOpen('end') && getSuggestions(endQuery).length" class="autocomplete-list">
+              <li
+                v-for="place in getSuggestions(endQuery)"
+                :key="place.contentid"
+                @mousedown.prevent="selectPlace('end', null, place)"
+              >
+                <strong>{{ place.title }}</strong>
+                <span>{{ place.addr1 || place.category }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -65,7 +122,7 @@
       </div>
 
       <div class="action-row">
-        <button @click="drawRoute" :disabled="isLoadingRoute">
+        <button class="primary-btn" @click="drawRoute" :disabled="isLoadingRoute">
           {{ isLoadingRoute ? '경로 계산 중...' : '경로 안내' }}
         </button>
         <button class="secondary" @click="resetMap">초기화</button>
@@ -85,11 +142,6 @@
     <div class="content-grid">
       <div class="map-shell">
         <div ref="mapRef" class="map-container"></div>
-
-        <div class="map-search">
-          <input v-model="searchQuery" @input="applyFilters" placeholder="장소 이름, 주소, 카테고리 검색" />
-          <span class="result-pill">{{ places.length }}개 표시</span>
-        </div>
       </div>
 
       <div v-if="selectedPlace" class="detail-card">
@@ -138,7 +190,10 @@ const selectedPlace = ref(null)
 const routeInfo = ref(null)
 const routeError = ref('')
 const isLoadingRoute = ref(false)
-const searchQuery = ref('')
+
+const startQuery = ref('')
+const endQuery = ref('')
+const activeAutocompleteKey = ref(null)
 const draggedWaypointIndex = ref(null)
 
 const categoryOptions = [
@@ -213,22 +268,77 @@ function formatDuration(seconds) {
   return `${hours}시간 ${remainder}분`
 }
 
+function getPlaceById(id) {
+  return places.value.find((place) => place.contentid === id) || null
+}
+
+function getSuggestions(query) {
+  const keyword = (query || '').trim().toLowerCase()
+  const source = places.value
+
+  if (!keyword) {
+    return source.slice(0, 8)
+  }
+
+  return source
+    .filter((place) => {
+      const text = [place.title, place.addr1, place.category].filter(Boolean).join(' ').toLowerCase()
+      return text.includes(keyword)
+    })
+    .slice(0, 8)
+}
+
+function openAutocomplete(key) {
+  activeAutocompleteKey.value = key
+}
+
+function isAutocompleteOpen(key) {
+  return activeAutocompleteKey.value === key
+}
+
+function closeAutocomplete() {
+  activeAutocompleteKey.value = null
+}
+
+function scheduleClose() {
+  window.setTimeout(() => {
+    closeAutocomplete()
+  }, 120)
+}
+
+function onAutocompleteInput(key, index, value) {
+  if (key === 'start') {
+    startQuery.value = value
+    startId.value = ''
+  } else if (key === 'end') {
+    endQuery.value = value
+    endId.value = ''
+  } else if (key === 'waypoint') {
+    waypoints.value[index].query = value
+    waypoints.value[index].id = ''
+    waypoints.value[index].label = ''
+  }
+  openAutocomplete(key)
+}
+
+function selectPlace(key, index, place) {
+  if (key === 'start') {
+    startId.value = place.contentid
+    startQuery.value = place.title
+  } else if (key === 'end') {
+    endId.value = place.contentid
+    endQuery.value = place.title
+  } else if (key === 'waypoint') {
+    waypoints.value[index].id = place.contentid
+    waypoints.value[index].label = place.title
+    waypoints.value[index].query = place.title
+  }
+
+  closeAutocomplete()
+}
+
 function getFilteredPlaces() {
-  const query = searchQuery.value.trim().toLowerCase()
-
-  return allPlaces.value.filter((place) => {
-    const matchesCategory = activeCategories.value.includes(place.category)
-    if (!matchesCategory) return false
-
-    if (!query) return true
-
-    const searchableText = [place.title, place.addr1, place.category, place.tel]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-
-    return searchableText.includes(query)
-  })
+  return allPlaces.value.filter((place) => activeCategories.value.includes(place.category))
 }
 
 function applyFilters() {
@@ -242,20 +352,29 @@ function syncSelections() {
     startId.value = ''
     endId.value = ''
     waypoints.value = []
+    startQuery.value = ''
+    endQuery.value = ''
     return
   }
 
-  if (!places.value.some((place) => place.contentid === startId.value)) {
-    startId.value = places.value[0].contentid
-  }
+  const startPlace = getPlaceById(startId.value)
+  startQuery.value = startPlace?.title || ''
 
-  if (!places.value.some((place) => place.contentid === endId.value)) {
-    endId.value = places.value[1]?.contentid || places.value[0].contentid
-  }
+  const endPlace = getPlaceById(endId.value)
+  endQuery.value = endPlace?.title || ''
 
-  waypoints.value = waypoints.value.filter((waypoint) =>
-    places.value.some((place) => place.contentid === waypoint.id)
-  )
+  waypoints.value = waypoints.value.filter((waypoint) => {
+    if (!waypoint.id) return true
+    return Boolean(getPlaceById(waypoint.id))
+  })
+
+  waypoints.value.forEach((waypoint) => {
+    const place = getPlaceById(waypoint.id)
+    if (place) {
+      waypoint.label = place.title
+      waypoint.query = place.title
+    }
+  })
 }
 
 function toggleCategory(category) {
@@ -270,7 +389,7 @@ function toggleCategory(category) {
 }
 
 function addWaypoint() {
-  waypoints.value.push({ id: '' })
+  waypoints.value.push({ id: '', label: '', query: '' })
 }
 
 function removeWaypoint(index) {
@@ -362,8 +481,8 @@ async function loadPlaces() {
 async function drawRoute() {
   if (!map || !routeLayer) return
 
-  const start = places.value.find((item) => item.contentid === startId.value)
-  const end = places.value.find((item) => item.contentid === endId.value)
+  const start = getPlaceById(startId.value)
+  const end = getPlaceById(endId.value)
 
   if (!start || !end) {
     routeError.value = '출발지와 도착지를 모두 선택해 주세요.'
@@ -379,7 +498,7 @@ async function drawRoute() {
   }
 
   const waypointCoords = waypoints.value
-    .map((waypoint) => places.value.find((place) => place.contentid === waypoint.id))
+    .map((waypoint) => getPlaceById(waypoint.id))
     .filter(Boolean)
     .map((place) => getLatLng(place))
     .filter(Boolean)
@@ -407,7 +526,7 @@ async function drawRoute() {
       style: {
         color: '#2563eb',
         weight: 6,
-        opacity: 0.85,
+        opacity: 0.9,
       },
     }).addTo(routeLayer)
 
@@ -415,15 +534,12 @@ async function drawRoute() {
       .bindPopup(`<strong>출발</strong><br />${start.title}`)
       .addTo(routeLayer)
 
-    if (waypointCoords.length) {
-      waypointCoords.forEach((latlng, index) => {
-        const waypoint = waypoints.value[index]
-        const place = places.value.find((item) => item.contentid === waypoint?.id)
-        L.marker(latlng, { icon: createMarkerIcon('#f59e0b') })
-          .bindPopup(`<strong>경유지</strong><br />${place?.title || '경유지'}`)
-          .addTo(routeLayer)
-      })
-    }
+    waypointCoords.forEach((latlng, index) => {
+      const place = getPlaceById(waypoints.value[index]?.id)
+      L.marker(latlng, { icon: createMarkerIcon('#f59e0b') })
+        .bindPopup(`<strong>경유지</strong><br />${place?.title || '경유지'}`)
+        .addTo(routeLayer)
+    })
 
     L.marker(endLatLng, { icon: createMarkerIcon('#e74c3c') })
       .bindPopup(`<strong>도착</strong><br />${end.title}`)
@@ -446,7 +562,11 @@ function resetMap() {
   selectedPlace.value = null
   routeInfo.value = null
   routeError.value = ''
-  searchQuery.value = ''
+  startId.value = ''
+  endId.value = ''
+  startQuery.value = ''
+  endQuery.value = ''
+  waypoints.value = []
   if (map) {
     map.fitBounds(seoulBounds, { padding: [20, 20] })
   }
@@ -470,41 +590,69 @@ onMounted(() => {
 </script>
 
 <style scoped>
+:global(body) {
+  margin: 0;
+  background: #f5f7fb;
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 .map-page {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 100vh;
+  padding: 18px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f5f7fb 100%);
 }
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 14px;
+  padding: 18px;
   border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border-radius: 20px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
 }
 
-.map-controls {
-  display: flex;
-  flex-wrap: wrap;
+.panel-header h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #64748b;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  align-items: flex-end;
 }
 
-.control-group {
+.control-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 220px;
-  flex: 1 1 220px;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fbfdff;
 }
 
-.control-group.wide {
-  min-width: 280px;
-  flex: 1.2 1 280px;
+.control-card.wide {
+  grid-column: span 1;
 }
 
 label,
@@ -514,25 +662,25 @@ label,
   color: #334155;
 }
 
-select,
-button,
-input {
+input,
+button {
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
   border-radius: 10px;
   font-size: 14px;
 }
 
-select,
 input {
+  width: 100%;
+  border: 1px solid #d1d5db;
   background: #fff;
+  outline: none;
 }
 
 button {
-  background: #2563eb;
-  color: white;
   border: none;
   cursor: pointer;
+  color: #fff;
+  background: #2563eb;
 }
 
 button.secondary {
@@ -540,13 +688,13 @@ button.secondary {
 }
 
 button.small {
-  padding: 7px 10px;
+  padding: 8px 10px;
   font-size: 13px;
 }
 
 button:disabled {
-  opacity: 0.7;
   cursor: wait;
+  opacity: 0.7;
 }
 
 .filter-row {
@@ -576,8 +724,8 @@ button:disabled {
 
 .action-row {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .waypoint-list {
@@ -589,17 +737,17 @@ button:disabled {
 .waypoint-row {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
   padding: 8px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   cursor: move;
 }
 
 .drag-handle {
-  color: #64748b;
   font-size: 16px;
+  color: #64748b;
   user-select: none;
 }
 
@@ -608,15 +756,59 @@ button:disabled {
   width: fit-content;
 }
 
+.autocomplete-wrap {
+  position: relative;
+}
+
+.autocomplete-list {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.autocomplete-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.autocomplete-list li:hover {
+  background: #f8fafc;
+}
+
+.autocomplete-list strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.autocomplete-list span {
+  font-size: 12px;
+  color: #64748b;
+}
+
 .route-summary {
   display: flex;
-  gap: 16px;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 14px;
 }
 
 .route-error {
@@ -626,55 +818,21 @@ button:disabled {
 
 .content-grid {
   display: grid;
-  grid-template-columns: 1.8fr 1fr;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
   gap: 14px;
 }
 
 .map-shell {
-  position: relative;
+  min-width: 0;
 }
 
 .map-container {
   width: 100%;
-  height: 620px;
-  border-radius: 14px;
+  height: 640px;
+  border-radius: 16px;
   overflow: hidden;
   border: 1px solid #e5e7eb;
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.03);
-}
-
-.map-search {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-}
-
-.map-search input {
-  min-width: 220px;
-  border: none;
-  outline: none;
-  padding: 0;
-}
-
-.result-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .detail-card {
@@ -712,10 +870,6 @@ button:disabled {
   line-height: 1.3;
 }
 
-.close-btn {
-  flex-shrink: 0;
-}
-
 .detail-card img,
 .detail-image-placeholder {
   width: 100%;
@@ -738,7 +892,6 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  color: #374151;
 }
 
 .detail-item {
@@ -747,7 +900,7 @@ button:disabled {
   gap: 2px;
   padding: 10px;
   border-radius: 10px;
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
 }
 
@@ -762,41 +915,25 @@ button:disabled {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 780px) {
+  .map-page {
+    padding: 12px;
+  }
+
   .panel {
     padding: 12px;
   }
 
-  .map-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .control-group,
-  .control-group.wide {
-    min-width: 100%;
-    flex: 1 1 100%;
+  .controls-grid {
+    grid-template-columns: 1fr;
   }
 
   .map-container {
     height: 480px;
   }
 
-  .map-search {
-    left: 10px;
-    right: 10px;
-    flex-wrap: wrap;
-    border-radius: 12px;
-  }
-
-  .map-search input {
-    min-width: 0;
-    flex: 1 1 100%;
-  }
-
   .route-summary {
     flex-direction: column;
-    gap: 8px;
   }
 }
 </style>
