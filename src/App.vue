@@ -1,6 +1,7 @@
 <script setup>
 const navigation = [
   { label: '홈', to: '/' },
+  { label: '지도', to: '/map' },
   { label: '프로젝트 규칙', to: '/guide' },
 ]
 </script>
