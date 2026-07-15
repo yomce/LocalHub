@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-# LocalHub2
-
-협업 시작을 위한 Vue 3 공통 기반 프로젝트입니다. 현재는 라우팅, 공통 스타일, Git 규칙, 장소·게시글 데이터 계약과 샘플 JSON만 포함합니다.
-
-## 시작하기
-
-```bash
-=======
 <div align="center">
 
 # LocalHub
@@ -14,7 +5,7 @@
 ### 공공데이터 기반 서울 지역 정보 커뮤니티
 
 서울의 관광지, 맛집, 문화시설, 축제 정보를 확인하고
-익명으로 지역 경험을 공유할 수 있는 웹 서비스입니다.
+지역 경험을 공유할 수 있는 Vue 3 기반 웹 서비스입니다.
 
 <br>
 
@@ -26,45 +17,50 @@
 
 ---
 
+## 현재 구성
+
+현재는 협업을 위한 공통 기반을 포함합니다.
+
+* Vue 3 라우팅 및 공통 스타일
+* Git 협업 규칙
+* 장소·게시글 데이터 계약
+* 샘플 JSON 데이터
+
+---
+
 ## 주요 기능
 
-* 서울 관광지, 맛집, 문화시설, 축제 정보 조회
-* Leaflet 기반 지도 탐색
-* 로그인 없는 익명 게시판
+* 서울 지역 정보 조회
+* Leaflet 기반 지도 시각화 및 경로 안내
+* 익명 게시판 CRUD
 * AI 기반 지역 정보 챗봇
+* 소셜 공유 및 실시간 알림
 
 ---
 
-## 기술 스택
-
-`Vue 3` `Vite` `Vue Router` `Pinia` `Leaflet` `OpenAI API` `Netlify`
-
----
-
-## 실행 방법
+## 시작하기
 
 ```bash
 git clone https://github.com/사용자명/LocalHub.git
 cd LocalHub
 
->>>>>>> 5fdd72169ae3bae0b0d4b6de7d864b9bed5fd58c
 npm install
 npm run dev
 ```
 
-<<<<<<< HEAD
-## 팀 공통 문서
-
-- `docs/TEAM_RULES.md`: 기술·폴더·Git 규칙
-- `docs/DATA_CONTRACT.md`: 장소·게시글 데이터 형식
-- `public/data/samples/`: 데이터 샘플 JSON
-
-=======
-프로젝트 루트에 `.env` 파일을 생성합니다.
+AI 챗봇 사용 시 프로젝트 루트에 `.env` 파일을 생성합니다.
 
 ```env
 VITE_OPENAI_API_KEY=your_api_key
 ```
+
+---
+
+## 공통 문서
+
+* `docs/TEAM_RULES.md` : 기술·폴더·Git 규칙
+* `docs/DATA_CONTRACT.md` : 장소·게시글 데이터 형식
+* `public/data/samples/` : 샘플 JSON 데이터
 
 ---
 
@@ -90,11 +86,11 @@ docs: 문서 수정
 
 ## 팀원
 
-| 이름   | 담당         |
-| ---- | ---------- |
-| 권순일 | CRUD, 추가기능, 실시간알림 |
-| 김경연 | AI 챗봇, 소셜 공유 연동 |
-| 이승재 | 지도 시각화 및 경로 안내 |
+| 이름  | 담당                  |
+| --- | ------------------- |
+| 권순일 | CRUD, 추가 기능, 실시간 알림 |
+| 김경연 | AI 챗봇, 소셜 공유 연동     |
+| 이승재 | 지도 시각화, 경로 안내       |
 
 ---
 
@@ -103,4 +99,3 @@ docs: 문서 수정
 **LocalHub Team**
 
 </div>
->>>>>>> 5fdd72169ae3bae0b0d4b6de7d864b9bed5fd58c
