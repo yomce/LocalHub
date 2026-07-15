@@ -48,11 +48,15 @@ npm install
 npm run dev
 ```
 
-AI 챗봇 사용 시 프로젝트 루트에 `.env` 파일을 생성합니다.
+AI 챗봇 사용 시 서버 환경 변수로 OpenAI 키를 설정합니다.
 
-```env
-VITE_OPENAI_API_KEY=your_api_key
+```bash
+# 프로젝트 루트에서 실행
+set OPENAI_API_KEY=your_api_key
+# 또는 PowerShell: $env:OPENAI_API_KEY="your_api_key"
 ```
+
+Vite 개발 서버는 `/api/chat` 경로로 요청을 프록시해 서버 측에서 OpenAI를 호출합니다.
 
 ---
 
