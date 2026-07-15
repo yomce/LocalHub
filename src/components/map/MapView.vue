@@ -49,6 +49,7 @@
               @dragend="handleWaypointDragEnd"
             >
               <span class="drag-handle">⋮⋮</span>
+
               <div class="autocomplete-wrap">
                 <input
                   v-model="waypoint.query"
@@ -73,9 +74,11 @@
                   </li>
                 </ul>
               </div>
+
               <button class="secondary small" @click="removeWaypoint(index)">삭제</button>
             </div>
           </div>
+
           <button class="secondary small add-waypoint" @click="addWaypoint">경유지 추가</button>
         </div>
 
@@ -106,8 +109,8 @@
         </div>
       </div>
 
-      <div class="filter-row">
-        <span class="filter-label">카테고리</span>
+      <div class="section-block">
+        <div class="section-title">카테고리</div>
         <div class="filter-chips">
           <button
             v-for="option in categoryOptions"
@@ -121,11 +124,14 @@
         </div>
       </div>
 
-      <div class="action-row">
-        <button class="primary-btn" @click="drawRoute" :disabled="isLoadingRoute">
-          {{ isLoadingRoute ? '경로 계산 중...' : '경로 안내' }}
-        </button>
-        <button class="secondary" @click="resetMap">초기화</button>
+      <div class="section-block">
+        <div class="section-title">경로 제어</div>
+        <div class="action-row">
+          <button class="primary-btn" @click="drawRoute" :disabled="isLoadingRoute">
+            {{ isLoadingRoute ? '경로 계산 중...' : '경로 안내' }}
+          </button>
+          <button class="secondary" @click="resetMap">초기화</button>
+        </div>
       </div>
     </div>
 
@@ -142,32 +148,65 @@
     <div class="content-grid">
       <div class="map-shell">
         <div ref="mapRef" class="map-container"></div>
+
+        <div v-if="routeInfo && routeMiniCards.length" class="route-mini-cards">
+          <div
+            v-for="card in routeMiniCards"
+            :key="card.contentid || card.title"
+            class="mini-card"
+          >
+            <p class="mini-label">{{ card.type }}</p>
+            <strong>{{ card.title }}</strong>
+            <span>{{ card.category }}</span>
+          </div>
+        </div>
       </div>
 
-      <div v-if="selectedPlace" class="detail-card">
-        <div class="detail-header">
-          <div>
-            <span class="detail-badge">{{ selectedPlace.category }}</span>
-            <h3>{{ selectedPlace.title }}</h3>
+      <div class="side-panel">
+        <div v-if="selectedPlace" class="detail-card">
+          <div class="detail-header">
+            <div>
+              <span class="detail-badge">{{ selectedPlace.category }}</span>
+              <h3>{{ selectedPlace.title }}</h3>
+            </div>
+            <button class="secondary small close-btn" @click="selectedPlace = null">닫기</button>
           </div>
-          <button class="secondary small close-btn" @click="selectedPlace = null">닫기</button>
+
+          <img v-if="selectedPlace.firstimage" :src="selectedPlace.firstimage" :alt="selectedPlace.title" />
+          <div v-else class="detail-image-placeholder">이미지 없음</div>
+
+          <div class="detail-body">
+            <div class="detail-item">
+              <strong>주소</strong>
+              <span>{{ selectedPlace.addr1 || '주소 정보 없음' }}</span>
+            </div>
+            <div v-if="selectedPlace.tel" class="detail-item">
+              <strong>전화</strong>
+              <span>{{ selectedPlace.tel }}</span>
+            </div>
+            <div v-if="selectedPlace.contenttypeid" class="detail-item">
+              <strong>유형</strong>
+              <span>{{ selectedPlace.category }}</span>
+            </div>
+          </div>
         </div>
 
-        <img v-if="selectedPlace.firstimage" :src="selectedPlace.firstimage" :alt="selectedPlace.title" />
-        <div v-else class="detail-image-placeholder">이미지 없음</div>
+        <div class="recommend-card">
+          <div class="recommend-header">
+            <h3>추천 여행지</h3>
+            <span>경로 주변의 인기 포인트</span>
+          </div>
 
-        <div class="detail-body">
-          <div class="detail-item">
-            <strong>주소</strong>
-            <span>{{ selectedPlace.addr1 || '주소 정보 없음' }}</span>
-          </div>
-          <div v-if="selectedPlace.tel" class="detail-item">
-            <strong>전화</strong>
-            <span>{{ selectedPlace.tel }}</span>
-          </div>
-          <div v-if="selectedPlace.contenttypeid" class="detail-item">
-            <strong>유형</strong>
-            <span>{{ selectedPlace.category }}</span>
+          <div class="recommend-list">
+            <div
+              v-for="place in recommendedPlaces"
+              :key="place.contentid"
+              class="recommend-item"
+              @click="selectRecommended(place)"
+            >
+              <strong>{{ place.title }}</strong>
+              <span>{{ place.addr1 || place.category }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -176,7 +215,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -274,13 +313,11 @@ function getPlaceById(id) {
 
 function getSuggestions(query) {
   const keyword = (query || '').trim().toLowerCase()
-  const source = places.value
-
   if (!keyword) {
-    return source.slice(0, 8)
+    return places.value.slice(0, 8)
   }
 
-  return source
+  return places.value
     .filter((place) => {
       const text = [place.title, place.addr1, place.category].filter(Boolean).join(' ').toLowerCase()
       return text.includes(keyword)
@@ -303,7 +340,7 @@ function closeAutocomplete() {
 function scheduleClose() {
   window.setTimeout(() => {
     closeAutocomplete()
-  }, 120)
+  }, 140)
 }
 
 function onAutocompleteInput(key, index, value) {
@@ -318,6 +355,7 @@ function onAutocompleteInput(key, index, value) {
     waypoints.value[index].id = ''
     waypoints.value[index].label = ''
   }
+
   openAutocomplete(key)
 }
 
@@ -573,6 +611,54 @@ function resetMap() {
   applyFilters()
 }
 
+function selectRecommended(place) {
+  selectedPlace.value = place
+  if (map && place) {
+    const latlng = getLatLng(place)
+    if (latlng) {
+      map.flyTo(latlng, 14, { duration: 0.8 })
+    }
+  }
+}
+
+const recommendedPlaces = computed(() => {
+  const blockedIds = new Set([
+    startId.value,
+    endId.value,
+    ...waypoints.value.map((waypoint) => waypoint.id).filter(Boolean),
+  ])
+
+  return allPlaces.value
+    .filter((place) => {
+      if (blockedIds.has(place.contentid)) return false
+      return activeCategories.value.includes(place.category)
+    })
+    .slice(0, 3)
+})
+
+const routeMiniCards = computed(() => {
+  const cards = []
+
+  const startPlace = getPlaceById(startId.value)
+  if (startPlace) {
+    cards.push({ ...startPlace, type: '출발' })
+  }
+
+  waypoints.value.forEach((waypoint) => {
+    const place = getPlaceById(waypoint.id)
+    if (place) {
+      cards.push({ ...place, type: '경유' })
+    }
+  })
+
+  const endPlace = getPlaceById(endId.value)
+  if (endPlace) {
+    cards.push({ ...endPlace, type: '도착' })
+  }
+
+  return cards.slice(0, 4)
+})
+
 onMounted(() => {
   map = L.map(mapRef.value).setView([37.5665, 126.9780], 11)
   map.fitBounds(seoulBounds, { padding: [20, 20] })
@@ -651,8 +737,22 @@ onMounted(() => {
   background: #fbfdff;
 }
 
-.control-card.wide {
-  grid-column: span 1;
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fcfdff;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 label,
@@ -695,13 +795,6 @@ button.small {
 button:disabled {
   cursor: wait;
   opacity: 0.7;
-}
-
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
 }
 
 .filter-chips {
@@ -823,6 +916,7 @@ button:disabled {
 }
 
 .map-shell {
+  position: relative;
   min-width: 0;
 }
 
@@ -835,7 +929,53 @@ button:disabled {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.03);
 }
 
-.detail-card {
+.route-mini-cards {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-card {
+  min-width: 130px;
+  max-width: 180px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.mini-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+}
+
+.mini-card strong {
+  display: block;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.mini-card span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-card,
+.recommend-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -864,10 +1004,16 @@ button:disabled {
   font-weight: 700;
 }
 
-.detail-card h3 {
+.detail-card h3,
+.recommend-header h3 {
   margin: 0;
   font-size: 18px;
   line-height: 1.3;
+}
+
+.recommend-header span {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .detail-card img,
@@ -888,7 +1034,8 @@ button:disabled {
   font-weight: 600;
 }
 
-.detail-body {
+.detail-body,
+.recommend-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -907,6 +1054,27 @@ button:disabled {
 .detail-item strong {
   font-size: 13px;
   color: #2563eb;
+}
+
+.recommend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.recommend-item strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.recommend-item span {
+  font-size: 12px;
+  color: #64748b;
 }
 
 @media (max-width: 1100px) {
@@ -930,6 +1098,17 @@ button:disabled {
 
   .map-container {
     height: 480px;
+  }
+
+  .route-mini-cards {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .mini-card {
+    flex: 1 1 100%;
+    max-width: none;
   }
 
   .route-summary {
