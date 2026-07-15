@@ -185,6 +185,7 @@ export async function getBotReply(message) {
       const userPrompt = `사용자 질의: ${message}\n\n데이터 항목:\n${JSON.stringify(itemsForPrompt, null, 2)}\n\n요청: 위 데이터를 참고하여 한국어로 3~6개의 추천 또는 관련 정보를 간결하게 작성하세요. 각 항목에는 제목, 주소(또는 전화), 짧은 설명(한줄)과 지도 링크를 포함하세요.`;
 
       const aiText = await callOpenAI(systemPrompt, userPrompt);
+      console.info('[OpenAI] Received AI response:', aiText);
       if (aiText) {
         const safe = escapeHtml(aiText).replace(/\n/g, '<br/>');
         return `<div>${safe}</div>`;
@@ -206,6 +207,8 @@ export async function getBotReply(message) {
 
 // --- OpenAI helper (server-side via Vite proxy) ---
 async function callOpenAI(systemPrompt, userPrompt) {
+  console.info('[OpenAI] Sending chat request to proxy...')
+
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: {
@@ -214,15 +217,19 @@ async function callOpenAI(systemPrompt, userPrompt) {
     body: JSON.stringify({
       systemPrompt,
       userPrompt,
-      model: 'gpt-3.5-turbo'
+      model: 'gpt-5-mini'
     })
   });
 
   if (!res.ok) {
-    const txt = await res.text().catch(() => '');
+    const txt = await res.text().catch(() => '')
+    console.error('[OpenAI] Proxy request failed.', { status: res.status, detail: txt })
     throw new Error(`OpenAI proxy error: ${res.status} ${txt}`);
   }
 
   const j = await res.json();
+  if (j.content) {
+    console.info('[OpenAI] Key was loaded and a response was received successfully.')
+  }
   return j.content || null;
 }
