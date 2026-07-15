@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'localhub-posts'
 const BOOKMARK_KEY = 'localhub-bookmarks'
+const OWNED_POST_KEY = 'localhub-owned-posts'
 
 const seedPosts = [{
   id: 'post-welcome', category: '공지', title: 'LocalHub 서울 게시판에 오신 것을 환영합니다',
@@ -19,10 +20,19 @@ function readPosts() {
 }
 
 function normalizePost(post) {
-  return { ...post, viewCount: Number(post.viewCount || 0), likeCount: Number(post.likeCount || 0), liked: Boolean(post.liked), tags: Array.isArray(post.tags) ? post.tags : [], image: post.image || '', comments: Array.isArray(post.comments) ? post.comments : [] }
+  return { ...post, viewCount: Number(post.viewCount || 0), likeCount: Number(post.likeCount || 0), liked: Boolean(post.liked), tags: Array.isArray(post.tags) ? post.tags : [], image: post.image || '', comments: Array.isArray(post.comments) ? post.comments.map((comment) => ({ ...comment, passwordHash: comment.passwordHash || '' })) : [] }
 }
 
 function writePosts(posts) { localStorage.setItem(STORAGE_KEY, JSON.stringify(posts)) }
+
+export function getOwnedPostIds() {
+  try { const ids = JSON.parse(localStorage.getItem(OWNED_POST_KEY) || '[]'); return Array.isArray(ids) ? ids : [] } catch { return [] }
+}
+
+function rememberOwnedPost(id) {
+  const ids = getOwnedPostIds()
+  if (!ids.includes(id)) localStorage.setItem(OWNED_POST_KEY, JSON.stringify([...ids, id]))
+}
 
 export function getPosts() {
   return readPosts().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -39,6 +49,7 @@ export function createPost({ category, title, content, password, tags = [], imag
     createdAt: now, updatedAt: now,
   }
   writePosts([post, ...readPosts()])
+  rememberOwnedPost(post.id)
   return post
 }
 
@@ -82,17 +93,25 @@ export function togglePostBookmark(id) {
   localStorage.setItem(BOOKMARK_KEY, JSON.stringify(ids)); return index === -1
 }
 
-export function addComment(id, content) {
+export function addComment(id, content, password) {
   const posts = readPosts(); const post = posts.find((item) => item.id === id)
   if (!post) return null
-  const comment = { id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, author: '익명', content, createdAt: new Date().toISOString() }
+  const comment = { id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, author: '익명', content, passwordHash: password, createdAt: new Date().toISOString() }
   post.comments = [...(post.comments || []), comment]; writePosts(posts); return comment
 }
 
-export function deleteComment(postId, commentId) {
+export function verifyCommentPassword(postId, commentId, password) {
+  const post = getPost(postId); const comment = post?.comments?.find((item) => item.id === commentId)
+  return Boolean(comment && comment.passwordHash && comment.passwordHash === password)
+}
+
+export function deleteComment(postId, commentId, password) {
   const posts = readPosts(); const post = posts.find((item) => item.id === postId)
   if (!post) return false
-  const comments = post.comments || []; post.comments = comments.filter((comment) => comment.id !== commentId)
+  const comments = post.comments || []
+  const comment = comments.find((item) => item.id === commentId)
+  if (!comment || comment.passwordHash !== password) return false
+  post.comments = comments.filter((item) => item.id !== commentId)
   if (post.comments.length === comments.length) return false
   writePosts(posts); return true
 }
