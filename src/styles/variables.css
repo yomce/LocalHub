@@ -1,0 +1,12 @@
+:root {
+  --color-navy: #12223d;
+  --color-blue: #2764d8;
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-text: #1a2433;
+  --color-muted: #627087;
+  --color-line: #dfe5ee;
+  --radius-card: 16px;
+  --content-width: 1120px;
+}
+

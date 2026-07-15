@@ -1,0 +1,10 @@
+body { background: var(--color-bg); color: var(--color-text); }
+.app-header { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:18px max(24px, calc((100% - var(--content-width)) / 2)); background:var(--color-surface); border-bottom:1px solid var(--color-line); }
+.brand { color:var(--color-navy); font-size:1.25rem; font-weight:800; text-decoration:none; }
+nav { display:flex; gap:16px; } nav a { color:var(--color-muted); font-weight:700; text-decoration:none; } nav a.router-link-active { color:var(--color-blue); }
+.app-main { width:min(var(--content-width), calc(100% - 48px)); min-height:calc(100vh - 130px); margin:0 auto; padding:72px 0; }
+.app-footer { padding:24px; color:var(--color-muted); text-align:center; font-size:.875rem; }
+.intro-card { max-width:720px; padding:40px; background:var(--color-surface); border:1px solid var(--color-line); border-radius:var(--radius-card); box-shadow:0 12px 34px rgba(20, 43, 80, .07); }
+.eyebrow { margin:0 0 10px; color:var(--color-blue); font-size:.8rem; font-weight:800; letter-spacing:.08em; }.intro-card h1 { margin:0 0 16px; color:var(--color-navy); }.intro-card p, .intro-card li { color:var(--color-muted); line-height:1.7; }.intro-card ul { padding-left:20px; }.primary-link { display:inline-block; margin-top:12px; padding:11px 15px; border-radius:8px; background:var(--color-blue); color:white; font-weight:800; text-decoration:none; }
+@media (max-width: 640px) { .app-header { align-items:flex-start; flex-direction:column; }.app-main { width:min(100% - 32px, var(--content-width)); padding:36px 0; }.intro-card { padding:26px; } }
+
