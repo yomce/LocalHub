@@ -1,4 +1,6 @@
 <script setup>
+import Chatbot from './components/Chatbot.vue'
+
 const navigation = [
   { label: '홈', to: '/' },
   { label: '서울 게시판', to: '/board' },
@@ -19,5 +21,7 @@ const navigation = [
   </main>
 
   <footer class="app-footer">LocalHub · 협업 공통 기반</footer>
+
+  <Chatbot />
 </template>
 
