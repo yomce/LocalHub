@@ -14,16 +14,28 @@
 
         <div class="control-group wide">
           <label>경유지</label>
-          <div v-for="(waypoint, index) in waypoints" :key="index" class="waypoint-row">
-            <select v-model="waypoint.id">
-              <option value="">선택하세요</option>
-              <option v-for="place in places" :key="place.contentid" :value="place.contentid">
-                {{ place.title }}
-              </option>
-            </select>
-            <button class="secondary small" @click="removeWaypoint(index)">삭제</button>
+          <div class="waypoint-list">
+            <div
+              v-for="(waypoint, index) in waypoints"
+              :key="`${waypoint.id || 'empty'}-${index}`"
+              class="waypoint-row"
+              draggable="true"
+              @dragstart="handleWaypointDragStart(index)"
+              @dragover.prevent
+              @drop="handleWaypointDrop(index)"
+              @dragend="handleWaypointDragEnd"
+            >
+              <span class="drag-handle">⋮⋮</span>
+              <select v-model="waypoint.id">
+                <option value="">선택하세요</option>
+                <option v-for="place in places" :key="place.contentid" :value="place.contentid">
+                  {{ place.title }}
+                </option>
+              </select>
+              <button class="secondary small" @click="removeWaypoint(index)">삭제</button>
+            </div>
           </div>
-          <button class="secondary small" @click="addWaypoint">경유지 추가</button>
+          <button class="secondary small add-waypoint" @click="addWaypoint">경유지 추가</button>
         </div>
 
         <div class="control-group">
@@ -71,23 +83,40 @@
     </div>
 
     <div class="content-grid">
-      <div ref="mapRef" class="map-container"></div>
+      <div class="map-shell">
+        <div ref="mapRef" class="map-container"></div>
+
+        <div class="map-search">
+          <input v-model="searchQuery" @input="applyFilters" placeholder="장소 이름, 주소, 카테고리 검색" />
+          <span class="result-pill">{{ places.length }}개 표시</span>
+        </div>
+      </div>
 
       <div v-if="selectedPlace" class="detail-card">
         <div class="detail-header">
           <div>
-            <p class="eyebrow">{{ selectedPlace.category }}</p>
+            <span class="detail-badge">{{ selectedPlace.category }}</span>
             <h3>{{ selectedPlace.title }}</h3>
           </div>
-          <button class="secondary small" @click="selectedPlace = null">닫기</button>
+          <button class="secondary small close-btn" @click="selectedPlace = null">닫기</button>
         </div>
 
         <img v-if="selectedPlace.firstimage" :src="selectedPlace.firstimage" :alt="selectedPlace.title" />
+        <div v-else class="detail-image-placeholder">이미지 없음</div>
 
         <div class="detail-body">
-          <p><strong>주소</strong><br />{{ selectedPlace.addr1 || '주소 정보 없음' }}</p>
-          <p v-if="selectedPlace.tel"><strong>전화</strong><br />{{ selectedPlace.tel }}</p>
-          <p v-if="selectedPlace.contenttypeid"><strong>유형</strong><br />{{ selectedPlace.category }}</p>
+          <div class="detail-item">
+            <strong>주소</strong>
+            <span>{{ selectedPlace.addr1 || '주소 정보 없음' }}</span>
+          </div>
+          <div v-if="selectedPlace.tel" class="detail-item">
+            <strong>전화</strong>
+            <span>{{ selectedPlace.tel }}</span>
+          </div>
+          <div v-if="selectedPlace.contenttypeid" class="detail-item">
+            <strong>유형</strong>
+            <span>{{ selectedPlace.category }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -109,6 +138,8 @@ const selectedPlace = ref(null)
 const routeInfo = ref(null)
 const routeError = ref('')
 const isLoadingRoute = ref(false)
+const searchQuery = ref('')
+const draggedWaypointIndex = ref(null)
 
 const categoryOptions = [
   { value: '관광지', label: '관광지' },
@@ -182,19 +213,37 @@ function formatDuration(seconds) {
   return `${hours}시간 ${remainder}분`
 }
 
-function applyCategoryFilter() {
-  places.value = allPlaces.value.filter((place) => activeCategories.value.includes(place.category))
+function getFilteredPlaces() {
+  const query = searchQuery.value.trim().toLowerCase()
 
-  if (!places.value.length) {
-    places.value = [...allPlaces.value]
-  }
+  return allPlaces.value.filter((place) => {
+    const matchesCategory = activeCategories.value.includes(place.category)
+    if (!matchesCategory) return false
 
+    if (!query) return true
+
+    const searchableText = [place.title, place.addr1, place.category, place.tel]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return searchableText.includes(query)
+  })
+}
+
+function applyFilters() {
+  places.value = getFilteredPlaces()
   syncSelections()
   renderMarkers()
 }
 
 function syncSelections() {
-  if (!places.value.length) return
+  if (!places.value.length) {
+    startId.value = ''
+    endId.value = ''
+    waypoints.value = []
+    return
+  }
 
   if (!places.value.some((place) => place.contentid === startId.value)) {
     startId.value = places.value[0].contentid
@@ -217,7 +266,7 @@ function toggleCategory(category) {
     activeCategories.value = [...activeCategories.value, category]
   }
 
-  applyCategoryFilter()
+  applyFilters()
 }
 
 function addWaypoint() {
@@ -226,6 +275,27 @@ function addWaypoint() {
 
 function removeWaypoint(index) {
   waypoints.value.splice(index, 1)
+}
+
+function handleWaypointDragStart(index) {
+  draggedWaypointIndex.value = index
+}
+
+function handleWaypointDrop(targetIndex) {
+  if (draggedWaypointIndex.value === null || draggedWaypointIndex.value === targetIndex) {
+    draggedWaypointIndex.value = null
+    return
+  }
+
+  const next = [...waypoints.value]
+  const [moved] = next.splice(draggedWaypointIndex.value, 1)
+  next.splice(targetIndex, 0, moved)
+  waypoints.value = next
+  draggedWaypointIndex.value = null
+}
+
+function handleWaypointDragEnd() {
+  draggedWaypointIndex.value = null
 }
 
 function renderMarkers() {
@@ -286,7 +356,7 @@ async function loadPlaces() {
   )
 
   allPlaces.value = loaded.flat()
-  applyCategoryFilter()
+  applyFilters()
 }
 
 async function drawRoute() {
@@ -341,9 +411,7 @@ async function drawRoute() {
       },
     }).addTo(routeLayer)
 
-    L.marker(startLatLng, {
-      icon: createMarkerIcon('#2ecc71'),
-    })
+    L.marker(startLatLng, { icon: createMarkerIcon('#2ecc71') })
       .bindPopup(`<strong>출발</strong><br />${start.title}`)
       .addTo(routeLayer)
 
@@ -351,17 +419,13 @@ async function drawRoute() {
       waypointCoords.forEach((latlng, index) => {
         const waypoint = waypoints.value[index]
         const place = places.value.find((item) => item.contentid === waypoint?.id)
-        L.marker(latlng, {
-          icon: createMarkerIcon('#f59e0b'),
-        })
+        L.marker(latlng, { icon: createMarkerIcon('#f59e0b') })
           .bindPopup(`<strong>경유지</strong><br />${place?.title || '경유지'}`)
           .addTo(routeLayer)
       })
     }
 
-    L.marker(endLatLng, {
-      icon: createMarkerIcon('#e74c3c'),
-    })
+    L.marker(endLatLng, { icon: createMarkerIcon('#e74c3c') })
       .bindPopup(`<strong>도착</strong><br />${end.title}`)
       .addTo(routeLayer)
 
@@ -382,10 +446,11 @@ function resetMap() {
   selectedPlace.value = null
   routeInfo.value = null
   routeError.value = ''
+  searchQuery.value = ''
   if (map) {
     map.fitBounds(seoulBounds, { padding: [20, 20] })
   }
-  renderMarkers()
+  applyFilters()
 }
 
 onMounted(() => {
@@ -415,10 +480,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .map-controls {
@@ -433,24 +499,33 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   min-width: 220px;
+  flex: 1 1 220px;
 }
 
 .control-group.wide {
-  min-width: 320px;
+  min-width: 280px;
+  flex: 1.2 1 280px;
 }
 
 label,
 .filter-label {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #334155;
 }
 
 select,
-button {
-  padding: 8px 12px;
+button,
+input {
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
+}
+
+select,
+input {
+  background: #fff;
 }
 
 button {
@@ -465,7 +540,7 @@ button.secondary {
 }
 
 button.small {
-  padding: 6px 10px;
+  padding: 7px 10px;
   font-size: 13px;
 }
 
@@ -505,10 +580,32 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.waypoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .waypoint-row {
   display: flex;
   gap: 8px;
   align-items: center;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: move;
+}
+
+.drag-handle {
+  color: #64748b;
+  font-size: 16px;
+  user-select: none;
+}
+
+.add-waypoint {
+  margin-top: 6px;
+  width: fit-content;
 }
 
 .route-summary {
@@ -518,7 +615,7 @@ button:disabled {
   padding: 10px 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
 }
 
@@ -529,26 +626,66 @@ button:disabled {
 
 .content-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1.8fr 1fr;
   gap: 14px;
+}
+
+.map-shell {
+  position: relative;
 }
 
 .map-container {
   width: 100%;
   height: 620px;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid #e5e7eb;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.03);
+}
+
+.map-search {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.map-search input {
+  min-width: 220px;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .detail-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #fff;
+  padding: 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
 .detail-header {
@@ -558,24 +695,43 @@ button:disabled {
   align-items: flex-start;
 }
 
-.eyebrow {
-  margin: 0 0 4px;
+.detail-badge {
+  display: inline-flex;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
 }
 
 .detail-card h3 {
   margin: 0;
   font-size: 18px;
+  line-height: 1.3;
 }
 
-.detail-card img {
+.close-btn {
+  flex-shrink: 0;
+}
+
+.detail-card img,
+.detail-image-placeholder {
   width: 100%;
-  height: 180px;
+  height: 190px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.detail-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: #64748b;
+  font-weight: 600;
 }
 
 .detail-body {
@@ -585,9 +741,62 @@ button:disabled {
   color: #374151;
 }
 
-@media (max-width: 980px) {
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.detail-item strong {
+  font-size: 13px;
+  color: #2563eb;
+}
+
+@media (max-width: 1100px) {
   .content-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .panel {
+    padding: 12px;
+  }
+
+  .map-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control-group,
+  .control-group.wide {
+    min-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .map-container {
+    height: 480px;
+  }
+
+  .map-search {
+    left: 10px;
+    right: 10px;
+    flex-wrap: wrap;
+    border-radius: 12px;
+  }
+
+  .map-search input {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .route-summary {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 </style>
