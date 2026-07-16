@@ -128,8 +128,11 @@ async function shareViaKakao() {
     await shareKakao({
       title: shareTitle.value,
       description: shareDescription.value,
-      imageUrl: shareImage.value,
       url: shareUrl.value,
+      tags: post.value.tags,
+      viewCount: post.value.viewCount,
+      likeCount: post.value.likeCount,
+      commentCount: post.value.comments?.length,
     })
     showShareStatus('카카오톡 공유 창이 열렸습니다.')
   } catch (error) {
