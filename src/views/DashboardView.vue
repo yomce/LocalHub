@@ -1,0 +1,234 @@
+<template>
+  <section class="dashboard-page">
+    <div class="page-heading">
+      <div class="heading-wrapper">
+        <span class="eyebrow-badge">
+          <span class="pulse-dot"></span>
+          데이터 인사이트
+        </span>
+        <h1>게시글 통계 대시보드</h1>
+        <p class="page-description">카테고리별 게시글 수와 인기 태그, 좋아요/조회 통계를 감각적으로 확인하세요.</p>
+      </div>
+    </div>
+
+    <div class="dashboard-summary">
+      <article class="summary-card total-posts">
+        <div class="card-icon">📚</div>
+        <div class="card-info">
+          <span>총 게시글</span>
+          <strong>{{ totalPosts.toLocaleString() }}<small>개</small></strong>
+        </div>
+        <div class="card-glow"></div>
+      </article>
+
+      <article class="summary-card active-categories">
+        <div class="card-icon">🗺️</div>
+        <div class="card-info">
+          <span>활성 카테고리</span>
+          <strong>{{ totalCategories }}<small>개</small></strong>
+        </div>
+        <div class="card-glow"></div>
+      </article>
+
+      <article class="summary-card hot-tag">
+        <div class="card-icon">🔥</div>
+        <div class="card-info">
+          <span>최다 사용 태그</span>
+          <strong>{{ topTagName ? `#${topTagName}` : '없음' }}</strong>
+        </div>
+        <div class="card-glow"></div>
+      </article>
+    </div>
+
+    <div class="dashboard-grid">
+      <article class="dashboard-card pie-chart-box">
+        <div class="card-header">
+          <h2>카테고리 비율</h2>
+          <span class="chart-subtitle">카테고리별 여행 정보 선호도</span>
+        </div>
+        <div class="chart-container">
+          <canvas ref="categoryChart" aria-label="카테고리별 게시글 수 차트"></canvas>
+        </div>
+      </article>
+
+      <article class="dashboard-card bar-chart-box">
+        <div class="card-header">
+          <h2>실시간 인기 태그 TOP 6</h2>
+          <span class="chart-subtitle">현재 가장 핫한 서울 여행 키워드</span>
+        </div>
+        <div class="chart-container">
+          <canvas ref="tagChart" aria-label="인기 태그 차트"></canvas>
+        </div>
+      </article>
+
+      <article class="dashboard-card full-width-card">
+        <div class="card-header">
+          <h2>가장 관심도 높은 서울 여행기</h2>
+          <span class="chart-subtitle">조회수와 좋아요 합산 상위 6개 게시글 트렌드</span>
+        </div>
+        <div class="chart-container tall">
+          <canvas ref="topPostChart" aria-label="인기 게시글 통계 차트"></canvas>
+        </div>
+      </article>
+    </div>
+  </section>
+</template>
+
+<script setup>
+import { onMounted, ref } from 'vue'
+import { Chart, ArcElement, PieController, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
+import { getPosts } from '../services/postStorage'
+
+Chart.register(ArcElement, PieController, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
+
+const categoryChart = ref(null)
+const tagChart = ref(null)
+const topPostChart = ref(null)
+const totalPosts = ref(0)
+const totalCategories = ref(0)
+const topTagName = ref('')
+
+function buildCategoryData(posts) {
+  const counts = posts.reduce((acc, post) => {
+    acc[post.category] = (acc[post.category] || 0) + 1
+    return acc
+  }, {})
+
+  return {
+    labels: Object.keys(counts),
+    values: Object.values(counts),
+  }
+}
+
+function buildTagData(posts) {
+  const tagCounts = posts.reduce((acc, post) => {
+    ;(post.tags || []).forEach((tag) => {
+      acc[tag] = (acc[tag] || 0) + 1
+    })
+    return acc
+  }, {})
+
+  const sortedTags = Object.entries(tagCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6)
+
+  return {
+    labels: sortedTags.map(([tag]) => tag),
+    values: sortedTags.map(([, count]) => count),
+    topTag: sortedTags[0]?.[0] || '',
+  }
+}
+
+function buildTopPostData(posts) {
+  const sorted = [...posts].sort(
+    (a, b) =>
+      (b.viewCount || 0) + (b.likeCount || 0) -
+      ((a.viewCount || 0) + (a.likeCount || 0)),
+  )
+  const top = sorted.slice(0, 6)
+
+  return {
+    labels: top.map((post) => post.title.slice(0, 18)),
+    views: top.map((post) => Number(post.viewCount || 0)),
+    likes: top.map((post) => Number(post.likeCount || 0)),
+  }
+}
+
+function initChart(canvas, config) {
+  if (!canvas) return null
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  return new Chart(ctx, config)
+}
+
+onMounted(() => {
+  const posts = getPosts()
+  const categoryData = buildCategoryData(posts)
+  const tagData = buildTagData(posts)
+  const topPostData = buildTopPostData(posts)
+
+  totalPosts.value = posts.length
+  totalCategories.value = categoryData.labels.length
+  topTagName.value = tagData.topTag || '없음'
+
+  initChart(categoryChart.value, {
+    type: 'pie',
+    data: {
+      labels: categoryData.labels,
+      datasets: [
+        {
+          data: categoryData.values,
+          backgroundColor: ['#4f46e5', '#22c55e', '#0ea5e9', '#f97316', '#8b5cf6', '#ec4899'],
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+      },
+    },
+  })
+
+  initChart(tagChart.value, {
+    type: 'bar',
+    data: {
+      labels: tagData.labels,
+      datasets: [
+        {
+          label: '태그 빈도',
+          data: tagData.values,
+          backgroundColor: '#2563eb',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        x: { ticks: { color: '#334155' } },
+        y: { beginAtZero: true, ticks: { color: '#334155' } },
+      },
+    },
+  })
+
+  initChart(topPostChart.value, {
+    type: 'bar',
+    data: {
+      labels: topPostData.labels,
+      datasets: [
+        {
+          label: '조회수',
+          data: topPostData.views,
+          backgroundColor: '#0ea5e9',
+        },
+        {
+          label: '좋아요',
+          data: topPostData.likes,
+          backgroundColor: '#f59e0b',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#334155' },
+          stacked: false,
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#334155' },
+          stacked: false,
+        },
+      },
+    },
+  })
+})
+</script>

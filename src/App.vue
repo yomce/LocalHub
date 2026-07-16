@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import Chatbot from './components/Chatbot.vue'
 import {
   clearNotifications,
@@ -12,6 +12,7 @@ import {
 
 const navigation = [
   { label: '홈', to: '/' },
+  { label: '대시보드', to: '/dashboard' },
   { label: '지도', to: '/map' },
   { label: '서울 게시판', to: '/board' },
   { label: '프로젝트 규칙', to: '/guide' },
