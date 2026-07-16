@@ -15,7 +15,6 @@ const navigation = [
   { label: '대시보드', to: '/dashboard' },
   { label: '지도', to: '/map' },
   { label: '서울 게시판', to: '/board' },
-  { label: '프로젝트 규칙', to: '/guide' },
 ]
 
 const router = useRouter()
@@ -78,6 +77,9 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="hanji-dust" aria-hidden="true">
+    <span v-for="index in 28" :key="index" :class="`dust dust-${index}`"></span>
+  </div>
   <header class="app-header">
     <RouterLink class="brand" to="/">LocalHub</RouterLink>
 
@@ -96,7 +98,7 @@ onUnmounted(() => {
         aria-label="알림 열기"
         @click="openNotifications"
       >
-        <span class="bell-icon" aria-hidden="true">🔔</span>
+        <span class="bell-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
 
         <span
           v-if="unreadCount"
@@ -137,7 +139,7 @@ onUnmounted(() => {
             type="button"
             @click="clearNotificationHistory"
           >
-            전체 삭제
+            <span class="icon-label"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M10 11v5M14 11v5M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg><span class="sr-only">전체 삭제</span></span>
           </button>
 
           <button
@@ -146,7 +148,7 @@ onUnmounted(() => {
             aria-label="알림 닫기"
             @click="closeNotifications"
           >
-            ×
+            <span aria-hidden="true">×</span>
           </button>
         </div>
       </div>
