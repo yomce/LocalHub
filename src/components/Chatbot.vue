@@ -92,7 +92,7 @@ const loading = ref(false)
 const chatBody = ref(null)
 const sidebarOpen = ref(true)
 const isMobile = ref(false)
-const panelWidth = ref(430)
+const panelWidth = ref(600)
 const panelHeight = ref(620)
 const panelStyle = computed(() => {
   if (isMobile.value) {
@@ -488,7 +488,7 @@ onUnmounted(() => {
 .msg-content { display: flex; flex-direction: column; max-width: 78%; }
 .msg.user .msg-content { align-items: flex-end; }
 .msg.bot .msg-content { align-items: flex-start; }
-.msg-text { display: inline-block; padding: 10px 12px; word-break: break-word; white-space: pre-wrap; overflow-wrap: break-word; box-sizing: border-box; }
+.msg-text { display: inline-block; padding: 10px 12px; word-break: break-word; white-space: normal; overflow-wrap: break-word; box-sizing: border-box; }
 .msg.user .msg-text { background: linear-gradient(135deg, var(--color-blue), #4f8cff); color: #fff; border-radius: 16px 16px 6px 16px; box-shadow: 0 8px 20px rgba(39, 100, 216, 0.16); }
 .msg.bot .msg-text { background: #f3f7ff; color: var(--color-text); border-radius: 16px 16px 16px 6px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
 .msg-text :deep(.reply-shell) { display: flex; flex-direction: column; gap: 8px; width: 100%; }
