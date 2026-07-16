@@ -147,32 +147,45 @@ export async function initKakao() {
   kakaoReady = true
 }
 
-export async function shareKakao({ title, description, imageUrl, url }) {
+export async function shareKakao({ title, description, url, tags = [], viewCount = 0, likeCount = 0, commentCount = 0 }) {
   if (!kakaoReady) {
     await initKakao()
   }
 
-  if (!window.Kakao || !window.Kakao.Link) {
+  if (!window.Kakao || !window.Kakao.Share) {
     throw new Error('카카오 링크 공유 기능을 사용할 수 없습니다.')
   }
 
-  return window.Kakao.Link.sendDefault({
+  const defaultImageUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/assets/localhub-share-logo.png`
+    : ''
+
+  return window.Kakao.Share.sendDefault({
     objectType: 'feed',
     content: {
       title: title || 'LocalHub 공유',
       description: description || '서울 여행 정보와 게시글을 공유해보세요.',
-      imageUrl: imageUrl || '',
+      imageUrl: defaultImageUrl,
       link: {
-        mobileWebUrl: url,
-        webUrl: url,
+        mobileWebUrl: url || "https://localhub-1.netlify.app",
+        webUrl: url || "https://localhub-1.netlify.app",
       },
+    },
+    itemContent: {
+      profileText: 'LocalHub 서울 여행 게시판',
+      sum: '조회수',
+      sumOp: `${Number(viewCount || 0)}회`,
+    },
+    social: {
+      likeCount: Number(likeCount || 0),
+      commentCount: Number(commentCount || 0),
+      sharedCount: 0,
     },
     buttons: [
       {
-        title: '자세히 보기',
+        title: '게시글 보러가기',
         link: {
-          mobileWebUrl: url,
-          webUrl: url,
+          webUrl: url || "https://localhub-1.netlify.app",
         },
       },
     ],
