@@ -189,6 +189,11 @@
               <span>{{ selectedPlace.category }}</span>
             </div>
           </div>
+
+          <div class="action-row" v-if="!startId || !endId">
+            <button v-if="!startId" class="secondary small" @click="setPlaceAsStart(selectedPlace)">출발지로 설정</button>
+            <button v-if="!endId" class="secondary small" @click="setPlaceAsEnd(selectedPlace)">도착지로 설정</button>
+          </div>
         </div>
 
         <div class="recommend-card">
@@ -338,7 +343,8 @@ function getPlaceById(id) {
 function getSuggestions(query) {
   const keyword = (query || '').trim().toLowerCase()
 
-  const source = allPlaces.value.filter((place) => activeCategories.value.includes(place.category))
+  // 자동완성은 카테고리 필터와 무관하게 전체 장소를 대상으로 검색합니다.
+  const source = allPlaces.value
 
   if (!keyword) {
     return source.slice(0, 8)
@@ -430,11 +436,8 @@ function applyFilters() {
 
 function syncSelections() {
   if (!places.value.length) {
-    startId.value = ''
-    endId.value = ''
-    waypoints.value = []
-    startQuery.value = ''
-    endQuery.value = ''
+    startQuery.value = getPlaceById(startId.value)?.title || ''
+    endQuery.value = getPlaceById(endId.value)?.title || ''
     return
   }
 
@@ -491,10 +494,8 @@ function handleWaypointDragEnd() {
 function renderMarkers() {
   if (!map || !markersLayer) return
 
+  // 카테고리 변경 시 마커만 갱신하고, 경로 안내(routeLayer/routeInfo)는 건드리지 않습니다.
   markersLayer.clearLayers()
-  routeLayer.clearLayers()
-  routeInfo.value = null
-  routeError.value = ''
 
   const bounds = []
 
@@ -647,6 +648,12 @@ function resetMap() {
   startQuery.value = ''
   endQuery.value = ''
   waypoints.value = []
+
+  // 경로 안내는 오직 초기화 버튼을 눌렀을 때만 지워집니다.
+  if (routeLayer) {
+    routeLayer.clearLayers()
+  }
+
   if (map) {
     map.fitBounds(seoulBounds, { padding: [20, 20] })
   }
@@ -661,6 +668,18 @@ function selectRecommended(place) {
       map.flyTo(latlng, 14, { duration: 0.8 })
     }
   }
+}
+
+function setPlaceAsStart(place) {
+  if (!place) return
+  startId.value = place.contentid
+  startQuery.value = place.title
+}
+
+function setPlaceAsEnd(place) {
+  if (!place) return
+  endId.value = place.contentid
+  endQuery.value = place.title
 }
 
 const recommendedPlaces = computed(() => {
