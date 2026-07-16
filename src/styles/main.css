@@ -211,6 +211,7 @@ nav { display:flex; gap:16px; } nav a { color:var(--color-muted); font-weight:70
 
 /* LocalHub hanok-inspired visual refresh */
 body { background:var(--color-bg); color:var(--color-text); }
+@media (pointer:fine) { body, a, button, [role="button"], input, select, textarea { cursor:url('/assets/localhub-mascot-cursor-32.png') 3 4, auto !important; } }
 body::before { position:fixed; z-index:-1; inset:-8%; background:radial-gradient(circle at 90% 0%, rgba(201,111,82,.12), transparent 28rem), radial-gradient(circle at 0% 30%, rgba(125,135,85,.09), transparent 24rem); content:""; pointer-events:none; animation:hanji-drift 18s ease-in-out infinite alternate; }
 .hanji-dust { position:fixed; z-index:1; inset:0; overflow:hidden; pointer-events:none; }
 .hanji-dust .dust { position:absolute; display:block; width:5px; height:5px; border-radius:50%; background:rgba(155,105,67,.55); box-shadow:0 0 9px rgba(201,111,82,.34); filter:blur(.15px); animation:hanji-dust-float 16s linear infinite; }
