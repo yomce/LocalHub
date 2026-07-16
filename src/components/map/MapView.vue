@@ -244,14 +244,27 @@ const categoryOptions = [
 ]
 
 const activeCategories = ref(categoryOptions.map((option) => option.value))
+
+const koreaBounds = [
+  [33.0, 124.0],
+  [38.6, 132.0],
+]
+
 const seoulBounds = [
   [37.43, 126.70],
   [37.70, 127.20],
 ]
 
-let map = null
-let markersLayer = null
-let routeLayer = null
+function isInSouthKorea(item) {
+  const lat = Number(item.mapy)
+  const lng = Number(item.mapx)
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return false
+  }
+
+  return lat >= 33.0 && lat <= 38.6 && lng >= 124.0 && lng <= 132.0
+}
 
 function getLatLng(item) {
   const lat = Number(item.mapy)
@@ -261,8 +274,18 @@ function getLatLng(item) {
     return null
   }
 
+  if (!isInSouthKorea(item)) {
+    return null
+  }
+
   return [lat, lng]
 }
+
+let map = null
+let markersLayer = null
+let routeLayer = null
+
+
 
 function getCategoryColor(category) {
   const colors = {
@@ -382,7 +405,21 @@ function selectPlace(key, index, place) {
 }
 
 function getFilteredPlaces() {
-  return allPlaces.value.filter((place) => activeCategories.value.includes(place.category))
+  return allPlaces.value.filter((place) => {
+    if (!activeCategories.value.includes(place.category)) return false
+    return isInSouthKorea(place)
+  })
+}
+
+function toggleCategory(category) {
+  if (activeCategories.value.includes(category)) {
+    const next = activeCategories.value.filter((item) => item !== category)
+    activeCategories.value = next
+  } else {
+    activeCategories.value = [...activeCategories.value, category]
+  }
+
+  applyFilters()
 }
 
 function applyFilters() {
@@ -421,16 +458,6 @@ function syncSelections() {
   })
 }
 
-function toggleCategory(category) {
-  if (activeCategories.value.includes(category)) {
-    const next = activeCategories.value.filter((item) => item !== category)
-    activeCategories.value = next.length ? next : categoryOptions.map((option) => option.value)
-  } else {
-    activeCategories.value = [...activeCategories.value, category]
-  }
-
-  applyFilters()
-}
 
 function addWaypoint() {
   waypoints.value.push({ id: '', label: '', query: '' })
@@ -490,10 +517,9 @@ function renderMarkers() {
     bounds.push(latlng)
   })
 
-  if (bounds.length) {
-    map.fitBounds(bounds, { padding: [40, 40] })
-  } else {
-    map.fitBounds(seoulBounds, { padding: [20, 20] })
+  // 카테고리 변경 시 지도 자동 확대/축소 방지
+  if (!bounds.length) {
+    return
   }
 }
 
@@ -512,7 +538,7 @@ async function loadPlaces() {
       const data = await response.json()
 
       return (data.items || [])
-        .filter((item) => getLatLng(item))
+        .filter((item) => isInSouthKorea(item) && getLatLng(item))
         .slice(0, 80)
         .map((item) => ({ ...item, category, contentType: category }))
     })
@@ -701,7 +727,7 @@ const routeMiniCards = computed(() => {
 onMounted(() => {
   map = L.map(mapRef.value).setView([37.5665, 126.9780], 11)
   map.fitBounds(seoulBounds, { padding: [20, 20] })
-  map.setMaxBounds(seoulBounds)
+  map.setMaxBounds(koreaBounds)
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
