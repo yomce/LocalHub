@@ -57,6 +57,7 @@ nav { display:flex; gap:16px; } nav a { color:var(--color-muted); font-weight:70
 .post-social-actions { display:flex; gap:8px; padding:18px 0; border-top:1px solid var(--color-line); border-bottom:1px solid var(--color-line); }
 .social-button { padding:10px 14px; border:1px solid var(--color-line); border-radius:999px; background:var(--color-surface); color:var(--color-muted); cursor:pointer; font:inherit; }
 .social-button.active { border-color:#f0b44d; background:#fff8e9; color:#a86500; }
+.share-status { margin:0; padding:10px 14px; background:#eef6ff; border:1px solid #d7e8ff; border-radius:12px; color:var(--color-navy); font-size:.95rem; }
 .comments-section { margin:28px 0; }
 .comments-section h2 { margin:0 0 14px; color:var(--color-navy); font-size:1.1rem; }
 .comment-form { display:flex; gap:8px; }

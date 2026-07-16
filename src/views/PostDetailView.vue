@@ -1,32 +1,184 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { addComment, deleteComment, deletePost, getBookmarkedPostIds, getPost, increasePostViewCount, togglePostBookmark, togglePostLike, verifyCommentPassword, verifyPostPassword } from '../services/postStorage'
+import { copyTextToClipboard, getShareUrl, shareKakao, shareNative, setSocialMeta } from '../services/shareService'
 
-const route = useRoute(); const router = useRouter(); const post = ref(null); const errorMessage = ref(''); const commentContent = ref(''); const commentPassword = ref(''); const bookmarked = ref(false)
+const route = useRoute()
+const router = useRouter()
+const post = ref(null)
+const errorMessage = ref('')
+const commentContent = ref('')
+const commentPassword = ref('')
+const bookmarked = ref(false)
+const shareStatus = ref('')
+const supportsNativeShare = ref(false)
 const passwordModal = ref({ open: false, type: '', commentId: '', value: '', error: '' })
-onMounted(() => { const foundPost = getPost(route.params.id); if (!foundPost) { router.replace('/board'); return }; post.value = increasePostViewCount(foundPost.id); bookmarked.value = getBookmarkedPostIds().includes(foundPost.id) })
-function formatDate(value) { return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) }
-function openPasswordModal(type, commentId = '') { passwordModal.value = { open: true, type, commentId, value: '', error: '' } }
-function closePasswordModal() { passwordModal.value = { open: false, type: '', commentId: '', value: '', error: '' } }
+
+const sharePath = computed(() => (post.value ? `/board/${post.value.id}` : '/board'))
+const shareUrl = computed(() => getShareUrl(sharePath.value))
+const shareTitle = computed(() => (post.value ? `${post.value.title} · LocalHub` : 'LocalHub'))
+const shareDescription = computed(() => {
+  const content = String(post.value?.content || '').trim()
+  if (!content) {
+    return '서울 여행 정보와 추천을 공유하세요.'
+  }
+  const normalized = content.replace(/\s+/g, ' ')
+  return normalized.length > 120 ? `${normalized.slice(0, 120)}...` : normalized
+})
+const shareImage = computed(() => String(post.value?.image || '').trim())
+
+watch(post, (current) => {
+  if (!current) {
+    return
+  }
+
+  setSocialMeta({
+    title: shareTitle.value,
+    description: shareDescription.value,
+    url: shareUrl.value,
+    image: shareImage.value,
+  })
+}, { immediate: true })
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+}
+
+function openPasswordModal(type, commentId = '') {
+  passwordModal.value = { open: true, type, commentId, value: '', error: '' }
+}
+
+function closePasswordModal() {
+  passwordModal.value = { open: false, type: '', commentId: '', value: '', error: '' }
+}
+
 function submitPassword() {
   const modal = passwordModal.value
-  if (!modal.value) { modal.error = '비밀번호를 입력해 주세요.'; return }
-  if (modal.type === 'edit' || modal.type === 'delete-post') {
-    if (!verifyPostPassword(post.value.id, modal.value)) { modal.error = '게시글 비밀번호가 일치하지 않습니다.'; return }
-    if (modal.type === 'edit') router.push(`/board/${post.value.id}/edit`)
-    else { deletePost(post.value.id); router.replace('/board') }
-    closePasswordModal(); return
+  if (!modal.value) {
+    modal.error = '비밀번호를 입력해 주세요.'
+    return
   }
-  if (!verifyCommentPassword(post.value.id, modal.commentId, modal.value)) { modal.error = '댓글 비밀번호가 일치하지 않습니다.'; return }
-  if (modal.type === 'delete-comment') { deleteComment(post.value.id, modal.commentId, modal.value); post.value = getPost(post.value.id); closePasswordModal() }
+
+  if (modal.type === 'edit' || modal.type === 'delete-post') {
+    if (!verifyPostPassword(post.value.id, modal.value)) {
+      modal.error = '게시글 비밀번호가 일치하지 않습니다.'
+      return
+    }
+
+    if (modal.type === 'edit') {
+      router.push(`/board/${post.value.id}/edit`)
+    } else {
+      deletePost(post.value.id)
+      router.replace('/board')
+    }
+
+    closePasswordModal()
+    return
+  }
+
+  if (!verifyCommentPassword(post.value.id, modal.commentId, modal.value)) {
+    modal.error = '댓글 비밀번호가 일치하지 않습니다.'
+    return
+  }
+
+  if (modal.type === 'delete-comment') {
+    deleteComment(post.value.id, modal.commentId, modal.value)
+    post.value = getPost(post.value.id)
+    closePasswordModal()
+  }
 }
-function editPost() { openPasswordModal('edit') }
-function removePost() { openPasswordModal('delete-post') }
-function toggleLike() { post.value = togglePostLike(post.value.id) }
-function toggleBookmark() { bookmarked.value = togglePostBookmark(post.value.id) }
-function submitComment() { const content = commentContent.value.trim(); if (!content || commentPassword.value.length < 4) { errorMessage.value = '댓글 내용과 4자 이상의 비밀번호를 입력해 주세요.'; return }; addComment(post.value.id, content, commentPassword.value); errorMessage.value = ''; commentContent.value = ''; commentPassword.value = ''; post.value = getPost(post.value.id) }
-function removeComment(commentId) { openPasswordModal('delete-comment', commentId) }
+
+function editPost() {
+  openPasswordModal('edit')
+}
+
+function removePost() {
+  openPasswordModal('delete-post')
+}
+
+function toggleLike() {
+  post.value = togglePostLike(post.value.id)
+}
+
+function toggleBookmark() {
+  bookmarked.value = togglePostBookmark(post.value.id)
+}
+
+function showShareStatus(message) {
+  shareStatus.value = message
+  window.setTimeout(() => {
+    if (shareStatus.value === message) {
+      shareStatus.value = ''
+    }
+  }, 3000)
+}
+
+async function copyShareLink() {
+  try {
+    await copyTextToClipboard(shareUrl.value)
+    showShareStatus('공유 링크가 복사되었습니다.')
+  } catch (error) {
+    showShareStatus('링크 복사에 실패했습니다. 다시 시도해 주세요.')
+  }
+}
+
+async function shareViaKakao() {
+  try {
+    await shareKakao({
+      title: shareTitle.value,
+      description: shareDescription.value,
+      imageUrl: shareImage.value,
+      url: shareUrl.value,
+    })
+    showShareStatus('카카오톡 공유 창이 열렸습니다.')
+  } catch (error) {
+    showShareStatus(error?.message || '카카오톡 공유에 실패했습니다.')
+  }
+}
+
+async function shareNativeLink() {
+  try {
+    await shareNative({
+      title: shareTitle.value,
+      text: shareDescription.value,
+      url: shareUrl.value,
+    })
+    showShareStatus('공유가 완료되었습니다.')
+  } catch (error) {
+    showShareStatus('공유가 취소되었거나 지원되지 않습니다.')
+  }
+}
+
+function submitComment() {
+  const content = commentContent.value.trim()
+  if (!content || commentPassword.value.length < 4) {
+    errorMessage.value = '댓글 내용과 4자 이상의 비밀번호를 입력해 주세요.'
+    return
+  }
+
+  addComment(post.value.id, content, commentPassword.value)
+  errorMessage.value = ''
+  commentContent.value = ''
+  commentPassword.value = ''
+  post.value = getPost(post.value.id)
+}
+
+function removeComment(commentId) {
+  openPasswordModal('delete-comment', commentId)
+}
+
+onMounted(() => {
+  const foundPost = getPost(route.params.id)
+  if (!foundPost) {
+    router.replace('/board')
+    return
+  }
+
+  post.value = increasePostViewCount(foundPost.id)
+  bookmarked.value = getBookmarkedPostIds().includes(foundPost.id)
+  supportsNativeShare.value = typeof navigator !== 'undefined' && Boolean(navigator.share)
+})
 </script>
 
 <template>
@@ -39,7 +191,14 @@ function removeComment(commentId) { openPasswordModal('delete-comment', commentI
       <p class="post-author">{{ post.author }} · {{ formatDate(post.createdAt) }}<template v-if="post.updatedAt !== post.createdAt"> · 수정 {{ formatDate(post.updatedAt) }}</template></p>
       <img v-if="post.image" class="post-image" :src="post.image" alt="게시글 첨부 이미지" />
       <div class="post-content">{{ post.content }}</div>
-      <div class="post-social-actions"><button class="social-button" :class="{ active: post.liked }" type="button" @click="toggleLike">{{ post.liked ? '♥' : '♡' }} 좋아요 {{ post.likeCount || 0 }}</button><button class="social-button" :class="{ active: bookmarked }" type="button" @click="toggleBookmark">{{ bookmarked ? '★' : '☆' }} {{ bookmarked ? '북마크됨' : '북마크' }}</button></div>
+      <div class="post-social-actions">
+        <button class="social-button" :class="{ active: post.liked }" type="button" @click="toggleLike">{{ post.liked ? '♥' : '♡' }} 좋아요 {{ post.likeCount || 0 }}</button>
+        <button class="social-button" :class="{ active: bookmarked }" type="button" @click="toggleBookmark">{{ bookmarked ? '★' : '☆' }} {{ bookmarked ? '북마크됨' : '북마크' }}</button>
+        <button class="social-button" type="button" @click="copyShareLink">🔗 링크 복사</button>
+        <button class="social-button" type="button" @click="shareViaKakao">💬 카카오톡 공유</button>
+        <button v-if="supportsNativeShare" class="social-button" type="button" @click="shareNativeLink">공유</button>
+      </div>
+      <p v-if="shareStatus" class="share-status">{{ shareStatus }}</p>
       <section class="comments-section">
         <h2>댓글 {{ post.comments?.length || 0 }}</h2>
         <form class="comment-form" @submit.prevent="submitComment"><input v-model="commentContent" type="text" maxlength="500" placeholder="댓글을 입력해 주세요" /><input v-model="commentPassword" type="password" minlength="4" placeholder="비밀번호" /><button class="primary-link form-submit" type="submit">등록</button></form>
