@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { getPosts } from '../services/postStorage'
 
 const regions = [
   { id: 'downtown', name: '도심권', areas: '종로·중구·용산', lat: 37.54, lon: 126.98 },
@@ -13,9 +15,23 @@ const selectedRegionId = ref('downtown')
 const weatherByRegion = ref({})
 const isLoading = ref(true)
 const hasError = ref(false)
+const posts = ref(getPosts())
 
 const selectedRegion = computed(() => regions.find((region) => region.id === selectedRegionId.value))
 const selectedWeather = computed(() => weatherByRegion.value[selectedRegionId.value])
+const dashboardStats = computed(() => {
+  const allTags = posts.value.flatMap((post) => post.tags || [])
+  const tagCounts = allTags.reduce((counts, tag) => {
+    counts[tag] = (counts[tag] || 0) + 1
+    return counts
+  }, {})
+  const topTag = Object.entries(tagCounts).sort(([, a], [, b]) => b - a)[0]?.[0]
+  return {
+    posts: posts.value.length,
+    categories: new Set(posts.value.map((post) => post.category)).size,
+    topTag: topTag ? `#${topTag}` : '아직 없음',
+  }
+})
 
 const weatherLabels = {
   0: ['맑음', '☀️'],
@@ -128,7 +144,7 @@ onMounted(loadWeather)
           <p class="eyebrow">SEOUL TODAY</p>
           <h2 id="weather-title">서울 권역별 날씨</h2>
         </div>
-        <button class="weather-refresh" type="button" @click="loadWeather">새로고침</button>
+        <button class="weather-refresh icon-action" type="button" @click="loadWeather" aria-label="날씨 새로고침" title="날씨 새로고침"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-4L3 10M3 5v5h5M4 13a8 8 0 0 0 14.8 4L21 14m0 5v-5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><span class="sr-only">날씨 새로고침</span></button>
       </div>
 
       <p v-if="isLoading" class="weather-state">서울 권역별 날씨를 불러오는 중이에요.</p>
@@ -179,6 +195,34 @@ onMounted(loadWeather)
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="home-dashboard" aria-labelledby="dashboard-title">
+      <div class="section-heading-row">
+        <div>
+          <p class="eyebrow">LOCALHUB PULSE</p>
+          <h2 id="dashboard-title">서울 여행자들이 지금 보고 있어요</h2>
+        </div>
+        <RouterLink class="ghost-link" to="/dashboard">대시보드 보기 <span aria-hidden="true">↗</span></RouterLink>
+      </div>
+
+      <div class="home-stat-grid">
+        <article class="home-stat-card accent-blue">
+          <span class="stat-kicker">COMMUNITY POSTS</span>
+          <strong>{{ dashboardStats.posts }}</strong>
+          <span>여행자 게시글</span>
+        </article>
+        <article class="home-stat-card accent-lime">
+          <span class="stat-kicker">ACTIVE TOPICS</span>
+          <strong>{{ dashboardStats.categories }}</strong>
+          <span>활발한 카테고리</span>
+        </article>
+        <article class="home-stat-card accent-coral">
+          <span class="stat-kicker">TRENDING TAG</span>
+          <strong class="stat-tag">{{ dashboardStats.topTag }}</strong>
+          <span>지금 많이 언급되는 태그</span>
+        </article>
       </div>
     </section>
   </section>

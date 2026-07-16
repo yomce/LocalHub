@@ -40,8 +40,26 @@
       </article>
     </div>
 
+    <article class="explorer-card">
+      <div class="explorer-avatar" aria-hidden="true">旅</div>
+      <div class="explorer-copy">
+        <span class="explorer-kicker">LOCALHUB EXPLORER</span>
+        <h2>오늘도 서울을 한 칸 더 발견했어요</h2>
+        <p>커뮤니티가 쌓일수록 당신의 서울 탐험 레벨이 올라갑니다.</p>
+      </div>
+      <div class="explorer-level">
+        <span>LEVEL {{ explorerProfile.level }}</span>
+        <strong>{{ explorerProfile.badge }}</strong>
+      </div>
+      <div class="explorer-progress">
+        <div class="progress-label"><span>{{ explorerProfile.points }} XP</span><span>다음 레벨까지 {{ explorerProfile.next }} XP</span></div>
+        <div class="progress-track"><span :style="{ width: `${explorerProfile.progress}%` }"></span></div>
+        <div class="badge-row"><span class="earned-badge">✦ 로컬 기록가</span><span>○ 골목 수집가</span><span>○ 서울 큐레이터</span></div>
+      </div>
+    </article>
+
     <div class="dashboard-grid">
-      <article class="dashboard-card pie-chart-box">
+      <article class="dashboard-card pie-chart-box compact-chart-card">
         <div class="card-header">
           <h2>카테고리 비율</h2>
           <span class="chart-subtitle">카테고리별 여행 정보 선호도</span>
@@ -51,7 +69,7 @@
         </div>
       </article>
 
-      <article class="dashboard-card bar-chart-box">
+      <article class="dashboard-card bar-chart-box compact-chart-card">
         <div class="card-header">
           <h2>실시간 인기 태그 TOP 6</h2>
           <span class="chart-subtitle">현재 가장 핫한 서울 여행 키워드</span>
@@ -61,7 +79,7 @@
         </div>
       </article>
 
-      <article class="dashboard-card full-width-card">
+      <article class="dashboard-card full-width-card compact-chart-card">
         <div class="card-header">
           <h2>가장 관심도 높은 서울 여행기</h2>
           <span class="chart-subtitle">조회수와 좋아요 합산 상위 6개 게시글 트렌드</span>
@@ -75,7 +93,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Chart, ArcElement, PieController, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { getPosts } from '../services/postStorage'
 
@@ -87,6 +105,18 @@ const topPostChart = ref(null)
 const totalPosts = ref(0)
 const totalCategories = ref(0)
 const topTagName = ref('')
+const explorerProfile = computed(() => {
+  const points = totalPosts.value * 20 + totalCategories.value * 35
+  const level = Math.max(1, Math.floor(points / 100) + 1)
+  const currentLevelPoints = points % 100
+  return {
+    points,
+    level,
+    progress: Math.min(100, currentLevelPoints),
+    next: 100 - currentLevelPoints,
+    badge: level >= 4 ? '서울 큐레이터' : level >= 2 ? '동네 탐험가' : '첫 발자국',
+  }
+})
 
 function buildCategoryData(posts) {
   const counts = posts.reduce((acc, post) => {
@@ -158,7 +188,7 @@ onMounted(() => {
       datasets: [
         {
           data: categoryData.values,
-          backgroundColor: ['#4f46e5', '#22c55e', '#0ea5e9', '#f97316', '#8b5cf6', '#ec4899'],
+          backgroundColor: ['#c96f52', '#7d8755', '#b98a62', '#d99a70', '#8e6b58', '#a98b72'],
           borderWidth: 0,
         },
       ],
@@ -179,7 +209,7 @@ onMounted(() => {
         {
           label: '태그 빈도',
           data: tagData.values,
-          backgroundColor: '#2563eb',
+          backgroundColor: '#7d8755',
         },
       ],
     },
@@ -203,12 +233,12 @@ onMounted(() => {
         {
           label: '조회수',
           data: topPostData.views,
-          backgroundColor: '#0ea5e9',
+          backgroundColor: '#c96f52',
         },
         {
           label: '좋아요',
           data: topPostData.likes,
-          backgroundColor: '#f59e0b',
+          backgroundColor: '#b98a62',
         },
       ],
     },

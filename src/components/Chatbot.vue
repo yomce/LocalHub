@@ -7,7 +7,7 @@
           <path d="M8 10h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         </svg>
       </span>
-      <span>{{ isOpen ? '닫기' : '챗봇' }}</span>
+      <span class="sr-only">{{ isOpen ? '챗봇 닫기' : '챗봇 열기' }}</span>
     </button>
 
     <div class="chat-panel" :class="{ open: isOpen }" :style="panelStyle">
@@ -21,8 +21,8 @@
               <h3>최근 채팅</h3>
             </div>
             <button class="sidebar-new" @click="startNewChat" type="button">
-              <span>＋</span>
-              <span>새 대화</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+              <span class="sr-only">새 대화</span>
             </button>
           </div>
 
@@ -57,8 +57,8 @@
               </div>
             </div>
             <div class="chat-header-actions">
-              <button class="ghost-btn" @click="startNewChat" type="button">새 대화</button>
-              <button class="ghost-btn" @click="toggleSidebar" type="button">{{ sidebarOpen ? '접기' : '펼치기' }}</button>
+              <button class="ghost-btn icon-action" @click="startNewChat" type="button" aria-label="새 대화" title="새 대화"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg><span class="sr-only">새 대화</span></button>
+              <button class="ghost-btn icon-action" @click="toggleSidebar" type="button" :aria-label="sidebarOpen ? '사이드바 접기' : '사이드바 펼치기'" :title="sidebarOpen ? '사이드바 접기' : '사이드바 펼치기'"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path :d="sidebarOpen ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><span class="sr-only">{{ sidebarOpen ? '사이드바 접기' : '사이드바 펼치기' }}</span></button>
             </div>
           </header>
 
@@ -74,7 +74,7 @@
 
           <form class="chat-input" @submit.prevent="sendMessage">
             <input v-model="text" placeholder="질문을 입력하세요 (예: 관광 추천)" />
-            <button type="submit">전송</button>
+            <button class="icon-action" type="submit" aria-label="메시지 전송" title="메시지 전송"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Zm3 8h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><span class="sr-only">전송</span></button>
           </form>
         </section>
       </div>
@@ -540,4 +540,14 @@ onUnmounted(() => {
   .chat-sidebar { width: 100%; max-height: 220px; border-right: 0; border-bottom: 1px solid var(--color-line); }
   .chat-shell { flex-direction: column; }
 }
+
+.chat-toggle { display:grid; place-items:center; width:52px; height:52px; padding:0; border-radius:16px; background:var(--color-coral); color:#fffaf1; box-shadow:0 14px 28px rgba(159,79,56,.24); }
+.chat-toggle.is-open { background:var(--color-navy); }
+.chat-toggle .toggle-icon { width:22px; height:22px; }
+.sidebar-new, .ghost-btn, .chat-input button { display:inline-flex; align-items:center; justify-content:center; }
+.sidebar-new { width:40px; height:40px; margin:0; padding:0; border-radius:12px; background:var(--color-coral); }
+.sidebar-new svg, .ghost-btn svg, .chat-input button svg { width:19px; height:19px; }
+.chat-header-actions { gap:6px; }
+.ghost-btn.icon-action { width:36px; height:36px; min-width:36px; padding:0; border-radius:10px; }
+.chat-input button.icon-action { width:42px; height:42px; min-width:42px; padding:0; border-radius:12px; background:var(--color-coral); }
 </style>

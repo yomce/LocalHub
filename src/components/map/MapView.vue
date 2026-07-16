@@ -169,7 +169,7 @@
               <span class="detail-badge">{{ selectedPlace.category }}</span>
               <h3>{{ selectedPlace.title }}</h3>
             </div>
-            <button class="secondary small close-btn" @click="selectedPlace = null">닫기</button>
+            <button class="secondary small close-btn icon-action" aria-label="장소 상세 닫기" title="장소 상세 닫기" @click="selectedPlace = null"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg><span class="sr-only">닫기</span></button>
           </div>
 
           <img v-if="selectedPlace.firstimage" :src="selectedPlace.firstimage" :alt="selectedPlace.title" />
@@ -294,17 +294,17 @@ let routeLayer = null
 
 function getCategoryColor(category) {
   const colors = {
-    관광지: '#2563eb',
-    문화시설: '#7c3aed',
-    축제공연행사: '#0f766e',
-    숙박: '#ea580c',
-    레포츠: '#dc2626',
+    관광지: '#b85c43',
+    문화시설: '#7d8755',
+    축제공연행사: '#9b7a59',
+    숙박: '#d18a62',
+    레포츠: '#70483c',
   }
 
-  return colors[category] || '#2563eb'
+  return colors[category] || '#b85c43'
 }
 
-function createMarkerIcon(color = '#2563eb') {
+function createMarkerIcon(color = '#b85c43') {
   return L.divIcon({
     html: `
       <div style="
@@ -312,7 +312,7 @@ function createMarkerIcon(color = '#2563eb') {
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        border: 2px solid white;
+        border: 2px solid #fffaf1;
         box-shadow: 0 0 6px rgba(0,0,0,0.35);
       "></div>
     `,
@@ -605,24 +605,24 @@ async function drawRoute() {
     const route = data.routes[0]
     const routeLine = L.geoJSON(route.geometry, {
       style: {
-        color: '#2563eb',
+        color: '#b85c43',
         weight: 6,
         opacity: 0.9,
       },
     }).addTo(routeLayer)
 
-    L.marker(startLatLng, { icon: createMarkerIcon('#2ecc71') })
+    L.marker(startLatLng, { icon: createMarkerIcon('#7d8755') })
       .bindPopup(`<strong>출발</strong><br />${start.title}`)
       .addTo(routeLayer)
 
     waypointCoords.forEach((latlng, index) => {
       const place = waypointPlaces[index]
-      L.marker(latlng, { icon: createMarkerIcon('#f59e0b') })
+      L.marker(latlng, { icon: createMarkerIcon('#b98a62') })
         .bindPopup(`<strong>경유지</strong><br />${place?.title || '경유지'}`)
         .addTo(routeLayer)
     })
 
-    L.marker(endLatLng, { icon: createMarkerIcon('#e74c3c') })
+    L.marker(endLatLng, { icon: createMarkerIcon('#70483c') })
       .bindPopup(`<strong>도착</strong><br />${end.title}`)
       .addTo(routeLayer)
 
@@ -1199,4 +1199,56 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+/* Hanji map controls */
+:global(body) { background:#f7f2e8; }
+.map-page { gap:16px; padding:20px; background:radial-gradient(circle at 85% 0%, rgba(201,111,82,.13), transparent 24rem), linear-gradient(180deg, #fbf6ed 0%, #f1e7d8 100%); background-size:140% 140%; animation:hanji-map-breathe 20s ease-in-out infinite alternate; }
+.panel { padding:20px; border-color:#dccbb5; border-radius:18px; background:rgba(255,253,248,.9); box-shadow:0 18px 42px rgba(73,52,34,.09); backdrop-filter:blur(10px); }
+.panel-header h2 { color:#5a554f; font-family:"Noto Serif KR", "Noto Serif", Georgia, serif; letter-spacing:-.06em; }
+.eyebrow { color:#a9563d; }
+.control-card, .section-block { border-color:#e3d5c3; background:#fffaf1; }
+.section-title, label, .filter-label { color:#5d5044; }
+input { border-color:#d8c7b2; background:#fffdf8; color:#6b635b; }
+input:focus { border-color:#c96f52; box-shadow:0 0 0 4px rgba(201,111,82,.13); }
+button { background:#b85c43; box-shadow:0 5px 12px rgba(159,79,56,.14); transition:transform .18s ease, background .18s ease, box-shadow .18s ease; }
+button:hover:not(:disabled) { background:#9f4f38; box-shadow:0 8px 16px rgba(159,79,56,.2); transform:translateY(-1px); }
+button.secondary { background:#887b6d; }
+button.secondary:hover:not(:disabled) { background:#6f6255; }
+.chip { border-color:#d8c7b2; background:#f3eadc; color:#5d5044; }
+.chip.active { color:#fffaf1; }
+.filter-chips .chip:nth-child(1) { border-color:#d69a87; color:#a9563d; }
+.filter-chips .chip:nth-child(2) { border-color:#b7c18a; color:#687143; }
+.filter-chips .chip:nth-child(3) { border-color:#c9ad8d; color:#806344; }
+.filter-chips .chip:nth-child(4) { border-color:#e3b79a; color:#b56f4e; }
+.filter-chips .chip:nth-child(5) { border-color:#a4877b; color:#70483c; }
+.filter-chips .chip:nth-child(1).active { border-color:#b85c43; background:#b85c43; }
+.filter-chips .chip:nth-child(2).active { border-color:#7d8755; background:#7d8755; }
+.filter-chips .chip:nth-child(3).active { border-color:#9b7a59; background:#9b7a59; }
+.filter-chips .chip:nth-child(4).active { border-color:#d18a62; background:#d18a62; }
+.filter-chips .chip:nth-child(5).active { border-color:#70483c; background:#70483c; }
+.filter-chips .chip:nth-child(1).active,
+.filter-chips .chip:nth-child(2).active,
+.filter-chips .chip:nth-child(3).active,
+.filter-chips .chip:nth-child(4).active,
+.filter-chips .chip:nth-child(5).active { color:#fffaf1; }
+.waypoint-row { border-color:#e3d5c3; background:#f8f0e4; }
+.drag-handle { color:#9b7a59; }
+.autocomplete-list { border-color:#e3d5c3; background:#fffdf8; box-shadow:0 12px 28px rgba(73,52,34,.16); }
+.autocomplete-list li:hover { background:#f5eadc; }
+.autocomplete-list strong { color:#6b635b; }
+.autocomplete-list span { color:#887b6d; }
+.route-summary { border-color:#dccbb5; background:#f3eadc; color:#5d5044; }
+.route-error { color:#a33e31; }
+.map-container { border-color:#d8c7b2; box-shadow:inset 0 0 0 1px rgba(73,52,34,.07); }
+.mini-card, .detail-card, .recommend-card { border-color:#dccbb5; background:linear-gradient(180deg, #fffdf8 0%, #f8f0e4 100%); box-shadow:0 12px 30px rgba(73,52,34,.12); }
+.mini-label, .detail-item strong { color:#b85c43; }
+.mini-card strong, .recommend-item strong { color:#6b635b; }
+.mini-card span, .recommend-item span, .recommend-header span { color:#887b6d; }
+.detail-badge { background:#f1ddd2; color:#9f4f38; }
+.detail-card img, .detail-image-placeholder, .detail-item, .recommend-item { border-color:#e3d5c3; }
+.detail-image-placeholder { background:linear-gradient(135deg, #f8f0e4 0%, #eadbc8 100%); color:#887b6d; }
+.detail-item { background:#fffdf8; }
+.recommend-item { background:#fffdf8; transition:transform .18s ease, border-color .18s ease, background .18s ease; }
+.recommend-item:hover { border-color:#c96f52; background:#fff8ee; transform:translateX(3px); }
+@keyframes hanji-map-breathe { from { background-position:0% 0%; } to { background-position:100% 80%; } }
 </style>
