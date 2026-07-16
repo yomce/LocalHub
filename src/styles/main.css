@@ -8,6 +8,39 @@ nav { display:flex; gap:16px; } nav a { color:var(--color-muted); font-weight:70
 .eyebrow { margin:0 0 10px; color:var(--color-blue); font-size:.8rem; font-weight:800; letter-spacing:.08em; }.intro-card h1 { margin:0 0 16px; color:var(--color-navy); }.intro-card p, .intro-card li { color:var(--color-muted); line-height:1.7; }.intro-card ul { padding-left:20px; }.primary-link { display:inline-block; margin-top:12px; padding:11px 15px; border-radius:8px; background:var(--color-blue); color:white; font-weight:800; text-decoration:none; }
 @media (max-width: 640px) { .app-header { align-items:flex-start; flex-direction:column; }.app-main { width:min(100% - 32px, var(--content-width)); padding:36px 0; }.intro-card { padding:26px; } }
 
+.home-page { display:grid; gap:28px; }
+.home-heading h1 { margin:0 0 8px; color:var(--color-navy); }
+.weather-panel { padding:30px; background:var(--color-surface); border:1px solid var(--color-line); border-radius:var(--radius-card); box-shadow:0 12px 34px rgba(20, 43, 80, .07); }
+.weather-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; }
+.weather-panel-heading h2 { margin:0; color:var(--color-navy); }
+.weather-refresh { padding:8px 12px; border:1px solid var(--color-line); border-radius:8px; background:var(--color-surface); color:var(--color-blue); cursor:pointer; font:inherit; font-weight:700; }
+.weather-state { margin:0; padding:28px 0; color:var(--color-muted); text-align:center; }
+.weather-error { color:#c0392b; }
+.weather-content { display:grid; gap:22px; }
+.region-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; }
+.region-card { display:grid; gap:5px; min-height:112px; padding:15px; border:1px solid var(--color-line); border-radius:12px; background:#fbfcff; color:var(--color-muted); cursor:pointer; text-align:left; font:inherit; transition:.18s ease; }
+.region-card:hover, .region-card.active { border-color:#9cbcf5; background:#eef5ff; box-shadow:0 6px 16px rgba(39, 100, 216, .1); }
+.region-card.active { color:var(--color-navy); }
+.region-name { font-weight:800; }
+.region-areas { font-size:.78rem; }
+.region-temperature { margin-top:auto; color:var(--color-blue); font-size:1.15rem; font-weight:800; }
+.weather-detail { display:grid; grid-template-columns:1fr 1.4fr; gap:20px; padding:24px; border:1px solid #dce8fb; border-radius:14px; background:linear-gradient(135deg, #f7faff, #eef5ff); }
+.weather-main { display:flex; align-items:center; gap:18px; }
+.weather-icon { font-size:3.5rem; }
+.weather-location { margin:0 0 4px; color:var(--color-muted); font-size:.9rem; font-weight:700; }
+.weather-temperature { display:block; color:var(--color-navy); font-size:2.4rem; line-height:1.1; }
+.weather-summary { margin:7px 0 0; color:var(--color-muted); }
+.weather-stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; align-items:center; }
+.weather-stats div { display:grid; gap:6px; padding-left:14px; border-left:1px solid #d5e1f4; }
+.weather-stats span { color:var(--color-muted); font-size:.78rem; }
+.weather-stats strong { color:var(--color-navy); font-size:.95rem; }
+.activity-guide { grid-column:1 / -1; display:flex; gap:12px; padding:16px; border-radius:10px; background:rgba(255, 255, 255, .72); }
+.activity-guide-icon { color:#e3a21a; font-size:1.2rem; }
+.activity-guide p { margin:0; color:var(--color-muted); line-height:1.6; }
+.activity-guide .activity-label { margin-bottom:4px; color:var(--color-navy); font-size:.85rem; font-weight:800; }
+@media (max-width: 800px) { .region-grid { grid-template-columns:repeat(3, 1fr); }.weather-detail { grid-template-columns:1fr; }.weather-stats { margin-top:4px; } }
+@media (max-width: 640px) { .weather-panel { padding:22px; }.region-grid { grid-template-columns:repeat(2, 1fr); }.weather-stats { grid-template-columns:repeat(2, 1fr); gap:14px 8px; }.weather-stats div:nth-child(3) { border-left:0; padding-left:0; }.weather-detail { padding:18px; }.weather-temperature { font-size:2rem; } }
+
 .board-page, .post-detail-page, .form-page { max-width: 900px; margin: 0 auto; }
 .page-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:28px; }
 .page-heading h1 { margin:0 0 8px; color:var(--color-navy); }
